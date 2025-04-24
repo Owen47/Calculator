@@ -1,9 +1,54 @@
 #ui-box
 {
-
+    -fx-background-color: #27292E;
+    -fx-background-radius: 20px 20px 0px 0px;
 }
 
 #background-box
 {
+    -fx-background-color: #212327;
+}
 
+.numberButton
+{
+    -fx-background-color: #212327;
+    -fx-background-radius: 40px 40px 40px 40px;
+    -fx-font-size: 24px;
+    -fx-text-fill: white;
+}
+
+.operationButton
+{
+    -fx-background-color: #323438;
+    -fx-background-radius: 40px 40px 40px 40px;
+    -fx-font-size: 24px;
+    -fx-text-fill: white;
+}
+
+
+#submit
+{
+    -fx-background-color: linear-gradient(to bottom right, #00c3ff, #0078ff);
+    -fx-background-radius: 40px;
+    -fx-effect: dropshadow(gaussian, rgba(0,153,255,0.6), 20, 0.5, 0, 0);
+}
+
+#clearButton
+{
+    -fx-font-size: 20px;
+}
+
+
+#mathBox
+{
+    -fx-background-color: #212327;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 32px;
+}
+
+#lastOperationText
+{
+    -fx-text-fill: #ededed;
+    -fx-font-size: 23px;
 }
