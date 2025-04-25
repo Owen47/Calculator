@@ -22,7 +22,7 @@
             <Button layoutX="114.0" layoutY="390.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="numberButton" stylesheets="@styles/styles.css" text="0" />
             <Button layoutX="194.0" layoutY="390.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="numberButton" stylesheets="@styles/styles.css" text="." />
             <Button fx:id="copy" layoutX="40.0" layoutY="40.0" mnemonicParsing="false" onMouseClicked="#copy" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="📋" />
-            <Button fx:id="brackets" layoutX="116.0" layoutY="40.0" mnemonicParsing="false" onMouseClicked="#insertBrackets" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="( )" />
+            <Button fx:id="brackets" layoutX="116.0" layoutY="40.0" mnemonicParsing="false" onMouseClicked="#insertBrackets" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="(" />
             <Button layoutX="196.0" layoutY="41.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="x" />
             <Button layoutX="279.0" layoutY="126.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="-" />
             <Button layoutX="277.0" layoutY="213.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="+" />

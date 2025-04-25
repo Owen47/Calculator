@@ -11,6 +11,7 @@ import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.util.Arrays;
+import java.util.Objects;
 
 public class CalculatorController {
     @FXML
@@ -54,6 +55,14 @@ public class CalculatorController {
 
     @FXML
     private void insertBrackets() {
+        if (Objects.equals(brackets.getText(), "("))
+        {
+            resultText.setText(resultText.getText() + "(");
+            brackets.setText(")");
+        }else {
+            resultText.setText(resultText.getText() + ")");
+            brackets.setText("(");
+        }
 
     }
 
@@ -65,6 +74,7 @@ public class CalculatorController {
     @FXML
     private void clear() {
         resultText.setText("");
+        brackets.setText("(");
     }
 
     @FXML
