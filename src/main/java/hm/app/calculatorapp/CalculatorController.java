@@ -31,6 +31,8 @@ public class CalculatorController {
     @FXML
     private Button brackets;
 
+    private boolean clearInput = false;
+
 
     @FXML
     private void initialize() {
@@ -42,7 +44,12 @@ public class CalculatorController {
         for (Node node : buttonPane.getChildren()) {
             if (node instanceof Button button && !Arrays.asList(notCalculationButtons).contains(button)) {
                 button.setOnAction(event -> {
-                    System.out.println("Button clicked: " + button.getText());
+                    if (clearInput) {
+                        brackets.setText("(");
+                        operationText.setText(resultText.getText());
+                        resultText.setText("");
+                        clearInput = false;
+                    }
                     resultText.setText(resultText.getText() + button.getText());
                 });
             }
@@ -52,14 +59,50 @@ public class CalculatorController {
 
     @FXML
     private void calculate() {
-        if (!Objects.isNull(resultText.getText())) {
-            String operation = resultText.getText();
 
+        String operation = resultText.getText();
+        resultText.clear();
+
+        if (isValidFormula(operation)) {
+
+            operationText.setText(operation);
             // Evaluate everything in the parentheses first
             operation = evaluateParentheses(operation);
 
-            operationText.setText(operation);
+            // Now calculate the resulting formatted string
+            operation = calculateFormatted(operation);
+
+            resultText.setText(operation);
+            clearInput = true;
+            brackets.setText("(");
         }
+        else
+        {
+            resultText.setText("Error");
+        }
+
+    }
+
+    private boolean isValidFormula(String formula) {
+        if (!formula.isEmpty()) {
+            for (int i = 0; i < formula.length(); i++) {
+                if (Character.isDigit(formula.charAt(i)) || isMathSymbol(formula.charAt(i))) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
+    private boolean isMathSymbol(char symbol) {
+        char[] mathItems = {'x', '-', '+', '÷'};
+        for (int i = 0; i < mathItems.length; i++) {
+            if (symbol == mathItems[i]) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
@@ -67,7 +110,10 @@ public class CalculatorController {
         int start;
         while ((start = expr.lastIndexOf('(')) != -1) {
             int close = expr.indexOf(')', start);
-            if (close == -1) throw new IllegalArgumentException("Unmatched '('");
+            if (close == -1)
+            {
+                return "Error";
+            }
 
             String inside = expr.substring(start + 1, close);
             String value  = calculateFormatted(inside);
@@ -114,6 +160,10 @@ public class CalculatorController {
                             operation.substring(endIndex + 1);
                     return calculateFormatted(newExpr);   // do next operator
                 }
+                else
+                {
+                    return "Error";
+                }
             }
 
             if (operation.charAt(i) == 'x')
@@ -148,6 +198,10 @@ public class CalculatorController {
                             value +
                             operation.substring(endIndex + 1);
                     return calculateFormatted(newExpr);   // do next operator
+                }
+                else
+                {
+                    return "Error";
                 }
             }
 
@@ -185,6 +239,10 @@ public class CalculatorController {
                             operation.substring(endIndex + 1);
                     return calculateFormatted(newExpr);   // do next operator
                 }
+                else
+                {
+                    return "Error";
+                }
             }
 
             if (operation.charAt(i) == '-')
@@ -219,6 +277,10 @@ public class CalculatorController {
                             value +
                             operation.substring(endIndex + 1);
                     return calculateFormatted(newExpr);   // do next operator
+                }
+                else
+                {
+                    return "Error";
                 }
             }
 
@@ -267,6 +329,7 @@ public class CalculatorController {
 
     private String subtract(String operation)
     {
+
         String[] nums = operation.split("-");
         if (nums.length == 2) {
             return String.valueOf(((Double.parseDouble(nums[0])) - (Double.parseDouble(nums[1]))));
@@ -280,6 +343,14 @@ public class CalculatorController {
 
     @FXML
     private void insertBrackets() {
+
+        if (clearInput) {
+            brackets.setText("(");
+            operationText.setText(resultText.getText());
+            resultText.setText("");
+            clearInput = false;
+        }
+
         if (Objects.equals(brackets.getText(), "("))
         {
             resultText.setText(resultText.getText() + "(");
