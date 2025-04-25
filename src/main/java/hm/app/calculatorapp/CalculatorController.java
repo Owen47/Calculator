@@ -7,6 +7,9 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 
+import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.util.Arrays;
 
 public class CalculatorController {
@@ -22,19 +25,22 @@ public class CalculatorController {
     private Button clear;
     @FXML
     private AnchorPane buttonPane;
+    @FXML
+    private Button brackets;
+
 
     @FXML
     private void initialize() {
         resultText.clear();
         operationText.setText("");
 
-        Button[] notCalculationButtons = {equals, copy, clear};
+        Button[] notCalculationButtons = {equals, copy, clear, brackets};
 
         for (Node node : buttonPane.getChildren()) {
             if (node instanceof Button button && !Arrays.asList(notCalculationButtons).contains(button)) {
                 button.setOnAction(event -> {
                     System.out.println("Button clicked: " + button.getText());
-                    // your logic here
+                    resultText.setText(resultText.getText() + button.getText());
                 });
             }
         }
@@ -44,6 +50,28 @@ public class CalculatorController {
     @FXML
     private void calculate() {
 
+    }
+
+    @FXML
+    private void insertBrackets() {
+
+    }
+
+    @FXML
+    private void deleteBrackets() {
+
+    }
+
+    @FXML
+    private void clear() {
+        resultText.setText("");
+    }
+
+    @FXML
+    private void copy() {
+        StringSelection selection = new StringSelection(resultText.getText());
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents(selection, null);
     }
 
 }

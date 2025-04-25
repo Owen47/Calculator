@@ -18,16 +18,16 @@
             <Button layoutX="40.0" layoutY="302.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="numberButton" stylesheets="@styles/styles.css" text="1" />
             <Button layoutX="116.0" layoutY="302.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="numberButton" stylesheets="@styles/styles.css" text="2" />
             <Button layoutX="196.0" layoutY="302.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="numberButton" stylesheets="@styles/styles.css" text="3" />
-            <Button id="clearButton" fx:id="clear" layoutX="40.0" layoutY="390.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="AC" textOverrun="CLIP" />
+            <Button id="clearButton" fx:id="clear" layoutX="40.0" layoutY="390.0" mnemonicParsing="false" onMouseClicked="#clear" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="AC" textOverrun="CLIP" />
             <Button layoutX="114.0" layoutY="390.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="numberButton" stylesheets="@styles/styles.css" text="0" />
             <Button layoutX="194.0" layoutY="390.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="numberButton" stylesheets="@styles/styles.css" text="." />
-            <Button fx:id="copy" layoutX="40.0" layoutY="40.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="📋" />
-            <Button layoutX="116.0" layoutY="40.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="8" />
+            <Button fx:id="copy" layoutX="40.0" layoutY="40.0" mnemonicParsing="false" onMouseClicked="#copy" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="📋" />
+            <Button fx:id="brackets" layoutX="116.0" layoutY="40.0" mnemonicParsing="false" onMouseClicked="#insertBrackets" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="( )" />
             <Button layoutX="196.0" layoutY="41.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="x" />
             <Button layoutX="279.0" layoutY="126.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="-" />
             <Button layoutX="277.0" layoutY="213.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="+" />
             <Button layoutX="277.0" layoutY="41.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="÷" />
-            <Button id="submit" fx:id="equals" layoutX="277.0" layoutY="302.0" mnemonicParsing="false" prefHeight="149.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="=" />
+            <Button id="submit" fx:id="equals" layoutX="277.0" layoutY="302.0" mnemonicParsing="false" onMouseClicked="#calculate" prefHeight="149.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="=" />
          </children></AnchorPane>
       <TextField id="mathBox" fx:id="resultText" alignment="CENTER_RIGHT" layoutX="25.0" layoutY="136.0" prefHeight="73.0" prefWidth="339.0" stylesheets="@styles/styles.css" text="Result" />
       <Label id="lastOperationText" fx:id="operationText" alignment="CENTER_RIGHT" layoutX="25.0" layoutY="89.0" prefHeight="34.0" prefWidth="327.0" text="Operation" />
