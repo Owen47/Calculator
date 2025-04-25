@@ -22,7 +22,6 @@ public class CalculatorController {
     @FXML private Label     operationText;
     @FXML private TextField resultText;
     @FXML private Button    equals;
-    @FXML private Button delete;
     @FXML private Button    clear;
     @FXML private AnchorPane buttonPane;
     @FXML private Button    leftBracket;
@@ -82,6 +81,8 @@ public class CalculatorController {
             return;
         }
 
+        System.out.println(expr);
+
         // 2. evaluate remaining expression
         expr = calculateFormatted(expr);
         if (isError(expr))
@@ -123,9 +124,14 @@ public class CalculatorController {
             if (expr.charAt(i) == ')' && i + 1 < expr.length() && isNumber(String.valueOf(expr.charAt(i + 1)))) {
                 expr = expr.substring(0, i + 1) + "x" + expr.substring(i + 1);
             }
+            if (expr.charAt(i) == ')' && i + 1 < expr.length() && expr.charAt(i + 1) == '(' ) {
+                expr = expr.replace(")(", ")x(");
+            }
         }
         return expr;
     }
+
+
 
     private boolean isNumber(String s)
     {
