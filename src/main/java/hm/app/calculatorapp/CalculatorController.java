@@ -1,11 +1,13 @@
 package hm.app.calculatorapp;
 
 import hm.shell.MathOperations;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
 
 import java.math.BigDecimal;
@@ -23,7 +25,9 @@ public class CalculatorController {
     @FXML private Button delete;
     @FXML private Button    clear;
     @FXML private AnchorPane buttonPane;
-    @FXML private Button    brackets;
+    @FXML private Button    leftBracket;
+    @FXML private Button    rightBracket;
+    @FXML private AnchorPane root;
 
     // flag so the very next digit press replaces the previous result
     private boolean clearInput = false;
@@ -34,12 +38,9 @@ public class CalculatorController {
      */
     @FXML
     private void initialize() {
-        resultText.setEditable(false);
-        resultText.setFocusTraversable(false);
         resultText.clear();
         operationText.setText("");
-
-        List<Button> reserved = List.of(equals, delete, clear, brackets);
+        List<Button> reserved = List.of(equals, clear, leftBracket, rightBracket);
 
         for (Node node : buttonPane.getChildren()) {
             if (node instanceof Button btn && !reserved.contains(btn)) {
@@ -48,10 +49,12 @@ public class CalculatorController {
                         resetForNextEntry();
                     }
                     resultText.appendText(btn.getText());
+
                 });
             }
         }
     }
+
 
     /**
      * Triggers when the equals button is pressed, calculates whatever is in the result text field
@@ -67,6 +70,9 @@ public class CalculatorController {
         }
 
         operationText.setText(expr);
+
+        // format bracket multiplication
+        expr = checkForBracketMultiplication(expr);
 
         // 1. deal with parentheses
         expr = evaluateParentheses(expr);
@@ -85,33 +91,64 @@ public class CalculatorController {
         }
 
         resultText.setText(expr);
-        brackets.setText("(");
     }
 
     /**
      * Triggers when the brackets button is pressed, places either an opening or closing bracket in the view depending on which is already placed
      */
     @FXML
-    private void insertBrackets() {
+    private void insertLeftBracket() {
         if (clearInput) {
             resetForNextEntry();
         }
 
-        if ("(".equals(brackets.getText())) {
-            resultText.appendText("(");
-            brackets.setText(")");
-        } else {
-            resultText.appendText(")");
-            brackets.setText("(");
+        resultText.appendText("(");
+    }
+
+    @FXML
+    private void insertRightBracket() {
+        if (clearInput) {
+            resetForNextEntry();
+        }
+
+        resultText.appendText(")");
+    }
+
+    private String checkForBracketMultiplication(String expr) {
+        for (int i = 0; i < expr.length(); i++) {
+            if (expr.charAt(i) == '(' && i != 0 && isNumber(String.valueOf(expr.charAt(i - 1)))) {
+                // insert a multiplication symbol into the operation
+                expr = expr.substring(0, i) + "x" + expr.substring(i);
+            }
+            if (expr.charAt(i) == ')' && i + 1 < expr.length() && isNumber(String.valueOf(expr.charAt(i + 1)))) {
+                expr = expr.substring(0, i + 1) + "x" + expr.substring(i + 1);
+            }
+        }
+        return expr;
+    }
+
+    private boolean isNumber(String s)
+    {
+        try
+        {
+            Integer.parseInt(s);
+            return true;
+        }
+        catch (NumberFormatException e)
+        {
+            return false;
         }
     }
+
 
     /**
      * clears the input section
      */
     @FXML
     private void deleteOne() {
-        resultText.setText(resultText.getText().replaceAll(".$", ""));
+        if (!isError(resultText.getText())) {
+            resultText.setText(resultText.getText().replaceAll(".$", ""));
+        }
 
     }
 
@@ -297,7 +334,6 @@ public class CalculatorController {
      * Resets the calculator UI so it is ready for another operation
      */
     private void resetForNextEntry() {
-        brackets.setText("(");
         operationText.setText(resultText.getText());
         resultText.clear();
         clearInput = false;
@@ -305,7 +341,6 @@ public class CalculatorController {
 
     @FXML
     private void clear() {
-        brackets.setText("(");
         resultText.clear();
     }
 
