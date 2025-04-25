@@ -63,15 +63,20 @@ public class CalculatorController {
         String expr = resultText.getText();
         resultText.clear();
 
+        operationText.setText(expr);
+
+        expr = checkForNegativeNumbers(expr);
+
         if (isValidFormula(expr)) {
             setError();
             return;
         }
 
-        operationText.setText(expr);
-
         // format bracket multiplication
         expr = checkForBracketMultiplication(expr);
+
+        // Re-check for any negetive numbers
+        expr = checkForNegativeNumbers(expr);
 
         // 1. deal with parentheses
         expr = evaluateParentheses(expr);
@@ -81,6 +86,8 @@ public class CalculatorController {
             return;
         }
 
+        // Last check for any negative values
+        expr = checkForNegativeNumbers(expr);
         System.out.println(expr);
 
         // 2. evaluate remaining expression
@@ -126,6 +133,16 @@ public class CalculatorController {
             }
             if (expr.charAt(i) == ')' && i + 1 < expr.length() && expr.charAt(i + 1) == '(' ) {
                 expr = expr.replace(")(", ")x(");
+            }
+        }
+        return expr;
+    }
+
+    private String checkForNegativeNumbers(String expr) {
+        for (int i = 0; i < expr.length(); i++) {
+
+            if (expr.charAt(i) == '-' && i - 1 < 0) {
+                expr = expr.substring(0, i) + "0" + expr.substring(i);
             }
         }
         return expr;
