@@ -13,10 +13,14 @@ import java.awt.datatransfer.StringSelection;
 import java.util.List;
 
 
+// Gets our math operations
+import static hm.shell.MathOperations.*;
+
+
 public class CalculatorController {
 
     @FXML private Label     operationText;
-    @FXML private TextField resultText;
+    @FXML private static TextField resultText;
     @FXML private Button    equals;
     @FXML private Button    copy;
     @FXML private Button    clear;
@@ -24,7 +28,7 @@ public class CalculatorController {
     @FXML private Button    brackets;
 
     // flag so the very next digit press replaces the previous result
-    private boolean clearInput = false;
+    private static boolean clearInput = false;
 
 
     /**
@@ -266,75 +270,12 @@ public class CalculatorController {
         return -1;
     }
 
-    /**
-     * Preforms division on two numbers
-     * @param numerator the numerator
-     * @param denominator the denominator
-     * @return the quotient
-     */
-    private String divide(String numerator, String denominator) {
-        if (denominator.equals("0"))
-        {
-            return setError();
-        }
-        try {
-            return String.valueOf(Double.parseDouble(numerator) / Double.parseDouble(denominator));
-        }
-        catch (NumberFormatException e) {
-            return setError();
-        }
-    }
-
-    /**
-     * multiplies two numbers together
-     * @param a number 1
-     * @param b number 2
-     * @return the product of the two numbers
-     */
-    private String multiply(String a, String b) {
-        try {
-            return String.valueOf(Double.parseDouble(a) * Double.parseDouble(b));
-        }
-        catch (NumberFormatException e) {
-            return setError();
-        }
-    }
-
-    /**
-     * adds two numbers together
-     * @param a number 1
-     * @param b number 2
-     * @return the sum of the two numbers
-     */
-    private String add(String a, String b) {
-        try {
-            return String.valueOf(Double.parseDouble(a) + Double.parseDouble(b));
-        }
-        catch (NumberFormatException e) {
-            return setError();
-        }
-    }
-
-    /**
-     * subtracts two numbers
-     * @param a number 1
-     * @param b number 2
-     * @return the subtraction of the two numbers
-     */
-    private String subtract(String a, String b) {
-        try {
-            return String.valueOf(Double.parseDouble(a) - Double.parseDouble(b));
-        }
-        catch (NumberFormatException e) {
-            return setError();
-        }
-    }
 
     /**
      * Puts an error message on the result / input screen
      * @return returns that there is an error
      */
-    private String setError() {
+    public static String setError() {
         resultText.setText("Error");
         clearInput = true;
         return "Error";
