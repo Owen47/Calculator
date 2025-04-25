@@ -57,3 +57,8 @@
     -fx-text-fill: #ededed;
     -fx-font-size: 23px;
 }
+
+#deleteButton
+{
+    -fx-font-size: 20px;
+}

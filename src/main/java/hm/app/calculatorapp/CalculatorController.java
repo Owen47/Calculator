@@ -1,5 +1,6 @@
 package hm.app.calculatorapp;
 
+import hm.shell.MathOperations;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
@@ -7,38 +8,38 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.AnchorPane;
 
-import java.awt.*;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
+import java.math.BigDecimal;
 import java.util.List;
 
 
 // Gets our math operations
-import static hm.shell.MathOperations.*;
 
 
 public class CalculatorController {
 
     @FXML private Label     operationText;
-    @FXML private static TextField resultText;
+    @FXML private TextField resultText;
     @FXML private Button    equals;
-    @FXML private Button    copy;
+    @FXML private Button delete;
     @FXML private Button    clear;
     @FXML private AnchorPane buttonPane;
     @FXML private Button    brackets;
 
     // flag so the very next digit press replaces the previous result
-    private static boolean clearInput = false;
+    private boolean clearInput = false;
 
 
     /**
      * Initializes all buttons and text fields for the calculator to run
      */
-    @FXML private void initialize() {
+    @FXML
+    private void initialize() {
+        resultText.setEditable(false);
+        resultText.setFocusTraversable(false);
         resultText.clear();
         operationText.setText("");
 
-        List<Button> reserved = List.of(equals, copy, clear, brackets);
+        List<Button> reserved = List.of(equals, delete, clear, brackets);
 
         for (Node node : buttonPane.getChildren()) {
             if (node instanceof Button btn && !reserved.contains(btn)) {
@@ -55,7 +56,8 @@ public class CalculatorController {
     /**
      * Triggers when the equals button is pressed, calculates whatever is in the result text field
      */
-    @FXML private void calculate() {
+    @FXML
+    private void calculate() {
         String expr = resultText.getText();
         resultText.clear();
 
@@ -68,21 +70,29 @@ public class CalculatorController {
 
         // 1. deal with parentheses
         expr = evaluateParentheses(expr);
-        if (isError(expr)) return;
+        if (isError(expr))
+        {
+            clearInput = true;
+            return;
+        }
 
         // 2. evaluate remaining expression
         expr = calculateFormatted(expr);
-        if (isError(expr)) return;
+        if (isError(expr))
+        {
+            clearInput = true;
+            return;
+        }
 
         resultText.setText(expr);
-        clearInput = true;
         brackets.setText("(");
     }
 
     /**
      * Triggers when the brackets button is pressed, places either an opening or closing bracket in the view depending on which is already placed
      */
-    @FXML private void insertBrackets() {
+    @FXML
+    private void insertBrackets() {
         if (clearInput) {
             resetForNextEntry();
         }
@@ -99,20 +109,12 @@ public class CalculatorController {
     /**
      * clears the input section
      */
-    @FXML private void clear() {
-        resultText.clear();
-        operationText.setText("");
-        brackets.setText("(");
+    @FXML
+    private void deleteOne() {
+        resultText.setText(resultText.getText().replaceAll(".$", ""));
+
     }
 
-    /**
-     * copies whatever is in the input section to clipboard
-     */
-    @FXML private void copy() {
-        StringSelection sel = new StringSelection(resultText.getText());
-        Clipboard copy = Toolkit.getDefaultToolkit().getSystemClipboard();
-        copy.setContents(sel, null);
-    }
 
     /**
      * checks if a provided formula is valid.
@@ -153,7 +155,7 @@ public class CalculatorController {
      */
     private boolean hasOnlyAllowedChars(String s) {
         for (char c : s.toCharArray()) {
-            if (!Character.isDigit(c) && "x-+÷()".indexOf(c) == -1) {
+            if (!Character.isDigit(c) && "x-+÷().".indexOf(c) == -1) {
                 return false;
             }
         }
@@ -214,36 +216,40 @@ public class CalculatorController {
      * @return the calculated number
      */
     private String calculateFormatted(String expr) {
-        for (char symbol : new char[]{'÷', 'x', '+', '-'}) {
-            int i = indexOfTopLevel(expr, symbol);
+        for (char op : new char[]{'÷','x','+','-'}) {
+            int i = indexOfTopLevel(expr, op);
             if (i != -1) {
-                String left  = expr.substring(0, i);
-                String right = expr.substring(i + 1);
-                if (left.isEmpty() || right.isEmpty())
-                {
+                String left  = calculateFormatted(expr.substring(0, i));
+                String right = calculateFormatted(expr.substring(i + 1));
+
+                if (isError(left) || isError(right)) return setError();
+
+                try {
+                    double val = switch (op) {
+                        case '÷' -> MathOperations.divide(left, right);
+                        case 'x' -> MathOperations.multiply(left, right);
+                        case '+' -> MathOperations.add(left, right);
+                        case '-' -> MathOperations.subtract(left, right);
+                        default -> throw new AssertionError();
+                    };
+                    return formatAnswer(val);
+                } catch (MathOperations.CalcException ex) {
                     return setError();
                 }
-                String l = calculateFormatted(left);
-                String r = calculateFormatted(right);
-                if (isError(l) || isError(r))
-                {
-                    return setError();
-                }
-                return switch (symbol) {
-                    case '÷' -> divide(l, r);
-                    case 'x' -> multiply(l, r);
-                    case '+' -> add(l, r);
-                    case '-' -> subtract(l, r);
-                    default -> setError();
-                };
             }
         }
+
+        /* leaf should be a pure number */
         try {
-            Double.parseDouble(expr);
-            return expr;
+
+            return formatAnswer(Double.parseDouble(expr));
         } catch (NumberFormatException e) {
             return setError();
         }
+    }
+
+    private String formatAnswer(Double expr) {
+        return BigDecimal.valueOf(expr).stripTrailingZeros().toPlainString();
     }
 
     /**
@@ -271,15 +277,12 @@ public class CalculatorController {
     }
 
 
-    /**
-     * Puts an error message on the result / input screen
-     * @return returns that there is an error
-     */
-    public static String setError() {
+    private String setError() {
         resultText.setText("Error");
         clearInput = true;
         return "Error";
     }
+
 
     /**
      * checks if there is an error. looks for the word "error"
@@ -299,4 +302,11 @@ public class CalculatorController {
         resultText.clear();
         clearInput = false;
     }
+
+    @FXML
+    private void clear() {
+        brackets.setText("(");
+        resultText.clear();
+    }
+
 }

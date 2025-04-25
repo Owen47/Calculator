@@ -1,72 +1,45 @@
 package hm.shell;
 
-import hm.app.calculatorapp.CalculatorController;
-
-import static hm.app.calculatorapp.CalculatorController.setError;
 
 public class MathOperations {
 
-    /**
-     * Preforms division on two numbers
-     * @param numerator the numerator
-     * @param denominator the denominator
-     * @return the quotient
-     */
-    public static String divide(String numerator, String denominator) {
-        if (denominator.equals("0"))
-        {
-            return setError();
-        }
+
+
+    /** Thrown when a calculation error occurs*/
+    public static class CalcException extends Exception {
+        public CalcException(String msg) { super(msg); }
+    }
+
+
+    // Math Operations used in calculator
+
+    public static double divide(String a, String b) throws CalcException {
+        double x = format(a), y = format(b);
+        if (y == 0) throw new CalcException("division by zero");
+        return x / y;
+    }
+
+    public static double multiply(String a, String b) throws CalcException {
+        return format(a) * format(b);
+    }
+
+    public static double add(String a, String b) throws CalcException {
+        return format(a) + format(b);
+    }
+
+    public static double subtract(String a, String b) throws CalcException {
+        return format(a) - format(b);
+    }
+
+
+    // converts strings into doubles
+
+    private static double format(String s) throws CalcException {
         try {
-            return String.valueOf(Double.parseDouble(numerator) / Double.parseDouble(denominator));
-        }
-        catch (NumberFormatException e) {
-            return setError();
+            return Double.parseDouble(s);
+        } catch (NumberFormatException ex) {
+            throw new CalcException("bad number: " + s);
         }
     }
 
-    /**
-     * multiplies two numbers together
-     * @param a number 1
-     * @param b number 2
-     * @return the product of the two numbers
-     */
-    public static String multiply(String a, String b) {
-        try {
-            return String.valueOf(Double.parseDouble(a) * Double.parseDouble(b));
-        }
-        catch (NumberFormatException e) {
-            return setError();
-        }
-    }
-
-    /**
-     * adds two numbers together
-     * @param a number 1
-     * @param b number 2
-     * @return the sum of the two numbers
-     */
-    public static String add(String a, String b) {
-        try {
-            return String.valueOf(Double.parseDouble(a) + Double.parseDouble(b));
-        }
-        catch (NumberFormatException e) {
-            return setError();
-        }
-    }
-
-    /**
-     * subtracts two numbers
-     * @param a number 1
-     * @param b number 2
-     * @return the subtraction of the two numbers
-     */
-    public static String subtract(String a, String b) {
-        try {
-            return String.valueOf(Double.parseDouble(a) - Double.parseDouble(b));
-        }
-        catch (NumberFormatException e) {
-            return setError();
-        }
-    }
 }
