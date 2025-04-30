@@ -31,6 +31,26 @@ public class MathOperations {
         return format(a) - format(b);
     }
 
+    public static double power(String a, String b) throws CalcException {
+        return Math.pow(format(a), format(b));
+    }
+
+    public static double sqrt(String a) throws CalcException {
+        return Math.sqrt(format(a));
+    }
+
+    public static double nlog(String a) throws CalcException {
+        return Math.log(format(a));
+    }
+
+    public static double factorial(String a) throws CalcException {
+            int num = Integer.parseInt(a);
+            for (int i = 1; i < num; i++) {
+                num *= i;
+            }
+            return num;
+    }
+
 
     // converts strings into doubles
 
