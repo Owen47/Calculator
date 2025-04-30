@@ -25,7 +25,10 @@ public class CalculatorController {
     @FXML private AnchorPane buttonPane;
     @FXML private Button    leftBracket;
     @FXML private Button    rightBracket;
-    @FXML private AnchorPane root;
+    @FXML private Button    power;
+    @FXML private Button    sqrt;
+    @FXML private Button    factorial;
+    @FXML private Button    nlog;
 
     // flag so the very next digit press replaces the previous result
     private boolean clearInput = false;
@@ -38,7 +41,7 @@ public class CalculatorController {
     private void initialize() {
         resultText.clear();
         operationText.setText("");
-        List<Button> reserved = List.of(equals, clear, leftBracket, rightBracket);
+        List<Button> reserved = List.of(equals, clear, leftBracket, rightBracket, power, sqrt, nlog);
 
         for (Node node : buttonPane.getChildren()) {
             if (node instanceof Button btn && !reserved.contains(btn)) {
