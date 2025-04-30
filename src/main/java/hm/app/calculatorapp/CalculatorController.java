@@ -1,16 +1,15 @@
 package hm.app.calculatorapp;
 
 import hm.shell.MathOperations;
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.AnchorPane;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 
@@ -98,7 +97,26 @@ public class CalculatorController {
             return;
         }
 
+        // round expression
+        expr = round(expr);
+        if (isError(expr))
+        {
+            clearInput = true;
+            return;
+        }
+
         resultText.setText(expr);
+    }
+
+    private String round(String expr) {
+        try {
+            double num = Double.parseDouble(expr);
+            num = new BigDecimal(num).setScale(4, RoundingMode.HALF_UP).doubleValue();
+            return String.valueOf(num);
+        }
+        catch (NumberFormatException e) {
+            return setError();
+        }
     }
 
     /**
@@ -141,7 +159,7 @@ public class CalculatorController {
     private String checkForNegativeNumbers(String expr) {
         for (int i = 0; i < expr.length(); i++) {
 
-            if (expr.charAt(i) == '-' && i - 1 < 0) {
+            if (expr.charAt(i) == '-' && i - 1 <= 0) {
                 expr = expr.substring(0, i) + "0" + expr.substring(i);
             }
         }
@@ -292,7 +310,7 @@ public class CalculatorController {
                         case '-' -> MathOperations.subtract(left, right);
                         default -> throw new AssertionError();
                     };
-                    return formatAnswer(val);
+                    return String.valueOf(val);
                 } catch (MathOperations.CalcException ex) {
                     return setError();
                 }
@@ -301,15 +319,10 @@ public class CalculatorController {
 
         /* leaf should be a pure number */
         try {
-
-            return formatAnswer(Double.parseDouble(expr));
+            return expr;
         } catch (NumberFormatException e) {
             return setError();
         }
-    }
-
-    private String formatAnswer(Double expr) {
-        return BigDecimal.valueOf(expr).stripTrailingZeros().toPlainString();
     }
 
     /**
