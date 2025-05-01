@@ -11,6 +11,7 @@ import javafx.scene.layout.AnchorPane;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+import java.util.regex.Pattern;
 
 
 public class CalculatorController {
@@ -420,7 +421,16 @@ public class CalculatorController {
                     case 'x' -> MathOperations.multiply(left, right);
                     default   -> throw new AssertionError();
                     };
-                return String.valueOf(val);
+                if (findOperator(PRIMARY_OPERATORS, expr) == -1) {
+                    return String.valueOf(val);
+                }
+                else
+                {
+                    // update the expression, and re-run the calculation
+                    String quoted = Pattern.quote(left + op + right);
+                    String nextExpr = expr.replaceFirst(quoted, String.valueOf(val));
+                    return calculateFormatted(nextExpr);
+                }
             }
             catch (MathOperations.CalcException ex) {
                 return setError();
@@ -443,7 +453,16 @@ public class CalculatorController {
                         case '-' -> MathOperations.subtract(left, right);
                         default   -> throw new AssertionError();
                     };
-                    return String.valueOf(val);
+                    if (findOperator(SECONDARY_OPERATORS, expr) == -1) {
+                        return String.valueOf(val);
+                    }
+                    else
+                    {
+                        // update the expression, and re-run the calculation
+                        String quoted = Pattern.quote(left + op + right);
+                        String nextExpr = expr.replaceFirst(quoted, String.valueOf(val));
+                        return calculateFormatted(nextExpr);
+                    }
                 }
                 catch (MathOperations.CalcException ex) {
                     return setError();
@@ -455,7 +474,6 @@ public class CalculatorController {
                 return expr;
             }
         }
-
 
     }
 
