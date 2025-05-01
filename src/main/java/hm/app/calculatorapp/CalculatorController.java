@@ -45,8 +45,9 @@ public class CalculatorController {
     /** Flag: superscript input toggle */
     private boolean superscriptMode = false;
 
-    /** Tracker: Tracks the current carrot position */
-    private int pos;
+    /** Flag: square root input toggle */
+    private boolean sqrtMode = false;
+
 
     /*------------------------------------------------------------------
      *  Initialisation
@@ -60,6 +61,9 @@ public class CalculatorController {
 
         // Auto‑hook every non‑reserved button
         for (Node node : buttonPane.getChildren()) {
+            if (node instanceof Button btn) {
+                btn.setFocusTraversable(false);
+            }
             if (node instanceof Button btn && !reserved.contains(btn)) {
                 btn.setOnAction(e -> appendCharacter(btn.getText()));
             }
@@ -68,28 +72,29 @@ public class CalculatorController {
 
     private void appendCharacter(String ch) {
 
-        if (!isDigit(ch))
-        {
-            // exit superscript mode when a non-numeric key is pressed
-            superscriptMode = false;
-            update();
-        }
-
         if (clearInput)
         {
             resetForNextEntry();
         }
-
-        if (superscriptMode)
-        {
-            resultText.insertText(pos, toSuperscript(ch));
-            update();
-        }
         else
         {
-            resultText.insertText(pos, ch);
+            if (!isDigit(ch))
+            {
+                // exit superscript mode when a non-numeric key is pressed
+                superscriptMode = false;
+            }
+            if (superscriptMode)
+            {
+                resultText.insertText(resultText.getCaretPosition(), toSuperscript(ch));
+            }
+            else
+            {
+                resultText.insertText(resultText.getCaretPosition(), ch);
+            }
             update();
         }
+
+
 
     }
 
@@ -112,18 +117,30 @@ public class CalculatorController {
 
     @FXML private void setSqrt() {
         superscriptMode = false;
-
-        if (clearInput) resetForNextEntry();
-        sqrt.getStyleClass().add("borderGlow");
-        resultText.appendText("√()");
-        update();
-
+        if (clearInput)
+        {
+            resetForNextEntry();
+        }
+        else
+        {
+            sqrtMode = !sqrtMode;
+            if (sqrtMode)
+            {
+                resultText.insertText(resultText.getCaretPosition(), "√()");
+                resultText.positionCaret(resultText.getText().lastIndexOf("√") + 2);
+            }
+            else
+            {
+                resultText.positionCaret(resultText.getText().length());
+            }
+            update();
+        }
     }
 
     @FXML private void setFactorial() {
         superscriptMode = false;
         if (clearInput) resetForNextEntry();
-        resultText.appendText("!");
+        resultText.insertText(resultText.getCaretPosition(), "!");
         update();
     }
 
@@ -140,14 +157,14 @@ public class CalculatorController {
         superscriptMode = false;
         if (clearInput) resetForNextEntry();
 
-        resultText.insertText(pos, b);
+        resultText.insertText(resultText.getCaretPosition(), b);
     }
 
     @FXML
     private void deleteOne() {
-        if (!isError(resultText.getText()) && pos > 0)
+        if (!isError(resultText.getText()) && resultText.getCaretPosition() > 0)
         {
-            resultText.deleteText(pos - 1, pos);
+            resultText.deleteText(resultText.getCaretPosition() - 1, resultText.getCaretPosition());
             update();
         }
 
@@ -158,6 +175,7 @@ public class CalculatorController {
         resultText.clear();
         operationText.setText("");
         superscriptMode = false;
+        sqrtMode = false;
         update();
     }
 
@@ -167,11 +185,12 @@ public class CalculatorController {
     @FXML
     private void calculate() throws MathOperations.CalcException {
         superscriptMode = false;
+        sqrtMode = false;
         String expr = resultText.getText();
         resultText.clear();
         operationText.setText(expr);
 
-        // 1) tidy input – negatives, implicit multiplications, superscripts
+        // 1) tidy input – negatives, implicit multiplications, superscripts, square roots
         expr = preprocess(expr);
         if (isError(expr)) return;
 
@@ -190,6 +209,7 @@ public class CalculatorController {
         // 5) round & display
         expr = round(expr);
         resultText.setText(expr);
+        resultText.positionCaret(resultText.getText().length());
         update();
     }
 
@@ -199,9 +219,10 @@ public class CalculatorController {
 
     private String preprocess(String expr) throws MathOperations.CalcException {
         expr = checkForNegativeNumbers(expr);
-        expr = handlePowers(expr);
-        if (isValidFormula(expr)) return setError();
         expr = insertImplicitMultiplication(expr);
+        expr = handlePowers(expr);
+        expr = handleSqrt(expr);
+        if (isValidFormula(expr)) return setError();
         expr = checkForNegativeNumbers(expr); // re‑run after new ‘x’ insertions
         return expr;
     }
@@ -304,17 +325,57 @@ public class CalculatorController {
      *  Square Root Handling
      *--------------------------------------------------------------*/
 
+    private String handleSqrt(String expr) {
+        int idx;
+        while ((idx = expr.indexOf('√')) != -1) {
+            // square root with no opening bracket
+            if (idx + 1 >= expr.length() || expr.charAt(idx + 1) != '(')
+                return setError();
 
+            // finds the depth
+            int start = idx + 2; // skip √(
+            int depth = 1;
+            int end = start;
+
+            while (end < expr.length() && depth > 0) {
+                char c = expr.charAt(end);
+                if (c == '(') depth++;
+                else if (c == ')') depth--;
+                end++;
+            }
+
+            // brackets are wrong
+            if (depth != 0) return setError();
+
+            String inside = expr.substring(start, end - 1);
+            String evaluatedInside;
+            try {
+                evaluatedInside = calculateFormatted(preprocess(inside));
+                if (isError(evaluatedInside)) return setError();
+            } catch (MathOperations.CalcException e) {
+                return setError();
+            }
+
+            double result;
+            try {
+                result = MathOperations.sqrt(evaluatedInside);
+            } catch (MathOperations.CalcException e) {
+                return setError();
+            }
+
+            // replace with result
+            String before = expr.substring(0, idx);
+            String after = expr.substring(end);
+            expr = before + result + after;
+        }
+
+        return expr;
+    }
 
     /*--------------------------------------------------------------
      *  Factorial Handling
      *--------------------------------------------------------------*/
 
-
-
-    /*--------------------------------------------------------------
-     *  Natural Log Handling
-     *--------------------------------------------------------------*/
 
 
     /*--------------------------------------------------------------
@@ -567,19 +628,21 @@ public class CalculatorController {
     }
 
     private void update() {
-        pos = resultText.getText().length();
-
-        // superscript mode toggle
-
+        // superscript glow
         if (superscriptMode) {
-            power.getStyleClass().add("borderGlow");
-        }
-        else
-        {
+            if (!power.getStyleClass().contains("borderGlow"))
+                power.getStyleClass().add("borderGlow");
+        } else {
             power.getStyleClass().removeAll("borderGlow");
         }
 
-        //sqrt mode toggle
+        // sqrt glow + caret move
+        if (sqrtMode) {
+            if (!sqrt.getStyleClass().contains("borderGlow"))
+                sqrt.getStyleClass().add("borderGlow");
+        } else {
+            sqrt.getStyleClass().removeAll("borderGlow");
+        }
     }
 
 
