@@ -72,6 +72,7 @@ public class CalculatorController {
         {
             // exit superscript mode when a non-numeric key is pressed
             superscriptMode = false;
+            update();
         }
 
         if (clearInput)
@@ -79,8 +80,17 @@ public class CalculatorController {
             resetForNextEntry();
         }
 
-        update();
-        resultText.insertText(pos, ch);
+        if (superscriptMode)
+        {
+            resultText.insertText(pos, toSuperscript(ch));
+            update();
+        }
+        else
+        {
+            resultText.insertText(pos, ch);
+            update();
+        }
+
     }
 
     /*------------------------------------------------------------------
@@ -88,13 +98,23 @@ public class CalculatorController {
      *------------------------------------------------------------------*/
 
     @FXML private void setPower() {
-        superscriptMode = !superscriptMode;
-        if (clearInput) resetForNextEntry();
+        if (clearInput)
+        {
+            resetForNextEntry();
+        }
+        else
+        {
+            superscriptMode = !superscriptMode;
+            update();
+        }
 
     }
 
     @FXML private void setSqrt() {
         superscriptMode = false;
+
+        if (clearInput) resetForNextEntry();
+        sqrt.getStyleClass().add("borderGlow");
         resultText.appendText("√()");
         update();
 
@@ -120,18 +140,17 @@ public class CalculatorController {
         superscriptMode = false;
         if (clearInput) resetForNextEntry();
 
-
-        resultText.appendText(b);
+        resultText.insertText(pos, b);
     }
 
     @FXML
     private void deleteOne() {
-        if (isError(resultText.getText())) return;
-        if (pos > 0) {
+        if (!isError(resultText.getText()) && pos > 0)
+        {
             resultText.deleteText(pos - 1, pos);
-            resultText.positionCaret(pos - 1);
             update();
         }
+
     }
 
     @FXML
@@ -139,6 +158,7 @@ public class CalculatorController {
         resultText.clear();
         operationText.setText("");
         superscriptMode = false;
+        update();
     }
 
     /*------------------------------------------------------------------
@@ -305,14 +325,14 @@ public class CalculatorController {
         return s.length() == 1 && Character.isDigit(s.charAt(0));
     }
 
-    private static boolean charContains(char[] arr, char c) {
+    private boolean charContains(char[] arr, char c) {
         for (char x : arr) {
             if (x == c) return true;
         }
         return false;
     }
 
-    public static boolean stringContains(char[] arr, String str) {
+    private boolean stringContains(char[] arr, String str) {
         int count = 0;
         for (char x : arr) {
             if (charContains(arr, str.charAt(count)))
@@ -547,8 +567,20 @@ public class CalculatorController {
     }
 
     private void update() {
-            sqrt.getStyleClass().remove("borderGlow");
-            pos = resultText.getText().length();
+        pos = resultText.getText().length();
+
+        // superscript mode toggle
+
+        if (superscriptMode) {
+            power.getStyleClass().add("borderGlow");
+        }
+        else
+        {
+            power.getStyleClass().removeAll("borderGlow");
+        }
+
+        //sqrt mode toggle
     }
+
 
 }
