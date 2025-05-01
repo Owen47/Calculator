@@ -22,7 +22,7 @@
             <Button layoutX="196.0" layoutY="390.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="numberButton" stylesheets="@styles/styles.css" text="." />
             <Button fx:id="rightBracket" layoutX="116.0" layoutY="41.0" mnemonicParsing="false" onMouseClicked="#insertRightBracket" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text=")" />
             <Button layoutX="196.0" layoutY="41.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="x" />
-            <Button fx:id="nlog" layoutX="358.0" layoutY="126.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="ln" />
+            <Button id="deleteButton" fx:id="delete" layoutX="358.0" layoutY="126.0" mnemonicParsing="false" onMouseClicked="#deleteOne" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="DEL" />
             <Button fx:id="factorial" layoutX="356.0" layoutY="41.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="x!" />
             <Button id="submit" fx:id="equals" layoutX="356.0" layoutY="216.0" mnemonicParsing="false" onMouseClicked="#calculate" prefHeight="235.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="=" />
             <Button fx:id="leftBracket" layoutX="40.0" layoutY="41.0" mnemonicParsing="false" onMouseClicked="#insertLeftBracket" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="(" />
@@ -30,8 +30,8 @@
             <Button layoutX="274.0" layoutY="125.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="-" />
             <Button layoutX="272.0" layoutY="212.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="+" />
             <Button layoutX="272.0" layoutY="40.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="÷" />
-            <Button fx:id="power" layoutX="273.0" layoutY="303.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="xʸ" />
-            <Button fx:id="sqrt" layoutX="271.0" layoutY="390.0" mnemonicParsing="false" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="√x" />
+            <Button id="powerButton" fx:id="power" layoutX="273.0" layoutY="303.0" mnemonicParsing="false" onMouseClicked="#setPower" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="xʸ" />
+            <Button fx:id="sqrt" layoutX="271.0" layoutY="390.0" mnemonicParsing="false" onMouseClicked="#setSqrt" prefHeight="59.0" prefWidth="61.0" styleClass="operationButton" stylesheets="@styles/styles.css" text="√x" />
          </children></AnchorPane>
       <TextField id="mathBox" fx:id="resultText" alignment="CENTER_RIGHT" layoutX="81.0" layoutY="94.0" prefHeight="73.0" prefWidth="339.0" stylesheets="@styles/styles.css" text="Result" />
       <Label id="lastOperationText" fx:id="operationText" alignment="CENTER_RIGHT" layoutX="118.0" layoutY="60.0" prefHeight="34.0" prefWidth="285.0" text="Operation" />

@@ -13,338 +13,455 @@ import java.math.RoundingMode;
 import java.util.List;
 
 
-// Gets our math operations
-
-
 public class CalculatorController {
 
-    @FXML private Label     operationText;
-    @FXML private TextField resultText;
-    @FXML private Button    equals;
-    @FXML private Button    clear;
+    /*------------------------------------------------------------------
+     *  FXML‑injected view references
+     *------------------------------------------------------------------*/
+    @FXML private Label      operationText;
+    @FXML private TextField  resultText;
+    @FXML private Button     equals;
+    @FXML private Button     clear;
     @FXML private AnchorPane buttonPane;
-    @FXML private Button    leftBracket;
-    @FXML private Button    rightBracket;
-    @FXML private Button    power;
-    @FXML private Button    sqrt;
-    @FXML private Button    factorial;
-    @FXML private Button    nlog;
+    @FXML private Button     leftBracket;
+    @FXML private Button     rightBracket;
+    @FXML private Button     power;
+    @FXML private Button     sqrt;
+    @FXML private Button     factorial;
+    @FXML private Button     delete;
 
-    // flag so the very next digit press replaces the previous result
+    /*------------------------------------------------------------------
+     *  Constants / helpers
+     *------------------------------------------------------------------*/
+    private static final char[] SUPERSCRIPT_DIGITS = { '⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹' };
+    private static final char[] OPERATORS          = { '÷','x','+','-' };
+    private static final char[] PRIMARY_OPERATORS = { '÷','x' };
+    private static final char[] SECONDARY_OPERATORS = { '+','-' };
+
+    /** Flag: resets calculator input screen */
     private boolean clearInput = false;
 
+    /** Flag: superscript input toggle */
+    private boolean superscriptMode = false;
 
-    /**
-     * Initializes all buttons and text fields for the calculator to run
-     */
+    /** Tracker: Tracks the current carrot position */
+    private int pos;
+
+    /*------------------------------------------------------------------
+     *  Initialisation
+     *------------------------------------------------------------------*/
     @FXML
     private void initialize() {
         resultText.clear();
         operationText.setText("");
-        List<Button> reserved = List.of(equals, clear, leftBracket, rightBracket, power, sqrt, nlog);
 
+        List<Button> reserved = List.of(equals, clear, leftBracket, rightBracket, power, sqrt, delete, factorial);
+
+        // Auto‑hook every non‑reserved button
         for (Node node : buttonPane.getChildren()) {
             if (node instanceof Button btn && !reserved.contains(btn)) {
-                btn.setOnAction(e -> {
-                    if (clearInput) {
-                        resetForNextEntry();
-                    }
-                    resultText.appendText(btn.getText());
-
-                });
+                btn.setOnAction(e -> appendCharacter(btn.getText()));
             }
         }
     }
 
+    private void appendCharacter(String ch) {
 
-    /**
-     * Triggers when the equals button is pressed, calculates whatever is in the result text field
-     */
-    @FXML
-    private void calculate() {
-        String expr = resultText.getText();
-        resultText.clear();
-
-        operationText.setText(expr);
-
-        expr = checkForNegativeNumbers(expr);
-
-        if (isValidFormula(expr)) {
-            setError();
-            return;
-        }
-
-        // format bracket multiplication
-        expr = checkForBracketMultiplication(expr);
-
-        // Re-check for any negetive numbers
-        expr = checkForNegativeNumbers(expr);
-
-        // 1. deal with parentheses
-        expr = evaluateParentheses(expr);
-        if (isError(expr))
+        if (!isDigit(ch))
         {
-            clearInput = true;
-            return;
+            // exit superscript mode when a non-numeric key is pressed
+            superscriptMode = false;
         }
 
-        // Last check for any negative values
-        expr = checkForNegativeNumbers(expr);
-        System.out.println(expr);
-
-        // 2. evaluate remaining expression
-        expr = calculateFormatted(expr);
-        if (isError(expr))
+        if (clearInput)
         {
-            clearInput = true;
-            return;
-        }
-
-        // round expression
-        expr = round(expr);
-        if (isError(expr))
-        {
-            clearInput = true;
-            return;
-        }
-
-        resultText.setText(expr);
-    }
-
-    private String round(String expr) {
-        try {
-            double num = Double.parseDouble(expr);
-            num = new BigDecimal(num).setScale(4, RoundingMode.HALF_UP).doubleValue();
-            return String.valueOf(num);
-        }
-        catch (NumberFormatException e) {
-            return setError();
-        }
-    }
-
-    /**
-     * Triggers when the brackets button is pressed, places either an opening or closing bracket in the view depending on which is already placed
-     */
-    @FXML
-    private void insertLeftBracket() {
-        if (clearInput) {
             resetForNextEntry();
         }
 
-        resultText.appendText("(");
+        update();
+        resultText.insertText(pos, ch);
     }
 
-    @FXML
-    private void insertRightBracket() {
-        if (clearInput) {
-            resetForNextEntry();
-        }
+    /*------------------------------------------------------------------
+     *  button handlers
+     *------------------------------------------------------------------*/
 
-        resultText.appendText(")");
+    @FXML private void setPower() {
+        superscriptMode = !superscriptMode;
+        if (clearInput) resetForNextEntry();
+
     }
 
-    private String checkForBracketMultiplication(String expr) {
-        for (int i = 0; i < expr.length(); i++) {
-            if (expr.charAt(i) == '(' && i != 0 && isNumber(String.valueOf(expr.charAt(i - 1)))) {
-                // insert a multiplication symbol into the operation
-                expr = expr.substring(0, i) + "x" + expr.substring(i);
-            }
-            if (expr.charAt(i) == ')' && i + 1 < expr.length() && isNumber(String.valueOf(expr.charAt(i + 1)))) {
-                expr = expr.substring(0, i + 1) + "x" + expr.substring(i + 1);
-            }
-            if (expr.charAt(i) == ')' && i + 1 < expr.length() && expr.charAt(i + 1) == '(' ) {
-                expr = expr.replace(")(", ")x(");
-            }
-        }
-        return expr;
+    @FXML private void setSqrt() {
+        superscriptMode = false;
+        resultText.appendText("√()");
+        update();
+
     }
 
-    private String checkForNegativeNumbers(String expr) {
-        for (int i = 0; i < expr.length(); i++) {
-
-            if (expr.charAt(i) == '-' && i - 1 <= 0) {
-                expr = expr.substring(0, i) + "0" + expr.substring(i);
-            }
-        }
-        return expr;
+    @FXML private void setFactorial() {
+        superscriptMode = false;
+        if (clearInput) resetForNextEntry();
+        resultText.appendText("!");
+        update();
     }
 
-
-
-    private boolean isNumber(String s)
-    {
-        try
-        {
-            Integer.parseInt(s);
-            return true;
-        }
-        catch (NumberFormatException e)
-        {
-            return false;
-        }
+    @FXML private void insertLeftBracket()  {
+        insertBracket("(");
+        update();
+    }
+    @FXML private void insertRightBracket() {
+        insertBracket(")");
+        update();
     }
 
+    private void insertBracket(String b) {
+        superscriptMode = false;
+        if (clearInput) resetForNextEntry();
 
-    /**
-     * clears the input section
-     */
+
+        resultText.appendText(b);
+    }
+
     @FXML
     private void deleteOne() {
-        if (!isError(resultText.getText())) {
-            resultText.setText(resultText.getText().replaceAll(".$", ""));
+        if (isError(resultText.getText())) return;
+        if (pos > 0) {
+            resultText.deleteText(pos - 1, pos);
+            resultText.positionCaret(pos - 1);
+            update();
         }
-
     }
 
-
-    /**
-     * checks if a provided formula is valid.
-     * @param s the formula to check
-     * @return true if valid
-     */
-    private boolean isValidFormula(String s) {
-        return s.isEmpty() || !hasBalancedParentheses(s) || !hasOnlyAllowedChars(s) || hasConsecutiveOperators(s) || startsOrEndsWithOperator(s);
+    @FXML
+    private void clear() {
+        resultText.clear();
+        operationText.setText("");
+        superscriptMode = false;
     }
 
-    /**
-     * checks if the parentheses in an equation are equal, e.g. same amount of ( as )
-     * @param s the formula to check
-     * @return true if valid
-     */
-    private boolean hasBalancedParentheses(String s) {
-        int depth = 0;
-        for (char c : s.toCharArray()) {
-            if (c == '(')
-            {
-                depth++;
-            } else if (c == ')')
-            {
-                depth--;
-            }
-            if (depth < 0)
-            {
-                return false;
+    /*------------------------------------------------------------------
+     *  Main evaluation
+     *------------------------------------------------------------------*/
+    @FXML
+    private void calculate() throws MathOperations.CalcException {
+        superscriptMode = false;
+        String expr = resultText.getText();
+        resultText.clear();
+        operationText.setText(expr);
+
+        // 1) tidy input – negatives, implicit multiplications, superscripts
+        expr = preprocess(expr);
+        if (isError(expr)) return;
+
+        // 2) resolve parentheses recursively
+        expr = evaluateParentheses(expr);
+        if (isError(expr)) return;
+
+        // 3) final power sweep (e.g. nested parentheses produced new superscripts)
+        expr = handlePowers(expr);
+        if (isError(expr)) return;
+
+        // 4) straightforward left‑to‑right evaluation honouring precedence
+        expr = calculateFormatted(expr);
+        if (isError(expr)) return;
+
+        // 5) round & display
+        expr = round(expr);
+        resultText.setText(expr);
+        update();
+    }
+
+    /*------------------------------------------------------------------
+     *  Pre‑processing helpers
+     *------------------------------------------------------------------*/
+
+    private String preprocess(String expr) throws MathOperations.CalcException {
+        expr = checkForNegativeNumbers(expr);
+        expr = handlePowers(expr);
+        if (isValidFormula(expr)) return setError();
+        expr = insertImplicitMultiplication(expr);
+        expr = checkForNegativeNumbers(expr); // re‑run after new ‘x’ insertions
+        return expr;
+    }
+
+    /*--------------------------------------------------------------
+     *  Superscript handling
+     *--------------------------------------------------------------*/
+
+    private String handlePowers(String expr) throws MathOperations.CalcException {
+        StringBuilder out = new StringBuilder();
+        int i = 0;
+        while (i < expr.length()) {
+            char c = expr.charAt(i);
+            if (charContains(SUPERSCRIPT_DIGITS, c)) {
+                /* Collect exponent */
+                int expStart = i;
+                while (i < expr.length() && charContains(SUPERSCRIPT_DIGITS, expr.charAt(i))) i++;
+                String exponentSup = expr.substring(expStart, i);
+                String exponent    = convertSuperscriptToNormal(exponentSup);
+
+                /* Locate & evaluate base */
+                int baseEnd = expStart; // exclusive
+                int baseStart;
+                String baseValue; // numeric string we will feed to MathOperations
+
+                if (expr.charAt(baseEnd - 1) == ')') {
+                    // Case:  ( ... )² → find matching '('
+                    int depth = 0;
+                    baseStart = baseEnd - 1;
+                    while (baseStart >= 0) {
+                        char ch = expr.charAt(baseStart);
+                        if (ch == ')') depth++;
+                        else if (ch == '(') {
+                            depth--;
+                            if (depth == 0) break;
+                        }
+                        baseStart--;
+                    }
+                    if (baseStart < 0) return setError(); // unmatched bracket
+
+                    String inside = expr.substring(baseStart + 1, baseEnd - 1);
+                    inside = calculateFormatted(inside);
+                    if (isError(inside)) return inside;
+                    baseValue = inside;
+
+                    // remove entire ( ... ) from output buffer
+                    out.delete(out.length() - (baseEnd - baseStart), out.length());
+                } else {
+                    // Case: plain number right before exponent
+                    baseStart = baseEnd - 1;
+                    while (baseStart >= 0 && !charContains(OPERATORS, expr.charAt(baseStart)) && expr.charAt(baseStart) != '(') {
+                        baseStart--;
+                    }
+                    baseStart++;
+                    baseValue = expr.substring(baseStart, baseEnd);
+                    out.delete(out.length() - (baseEnd - baseStart), out.length());
+                }
+
+                /* Compute and append */
+                String computed = String.valueOf(MathOperations.power(baseValue, exponent));
+                out.append(computed);
+            } else {
+                out.append(c);
+                i++;
             }
         }
-        return depth == 0;
+        return out.toString();
     }
 
-    /**
-     * checks if a formula has illegal characters
-     * @param s the formula to check
-     * @return true if valid
-     */
-    private boolean hasOnlyAllowedChars(String s) {
-        for (char c : s.toCharArray()) {
-            if (!Character.isDigit(c) && "x-+÷().".indexOf(c) == -1) {
-                return false;
-            }
+    public  String toSuperscript(String input) {
+        return input
+                .replace('0', '⁰')
+                .replace('1', '¹')
+                .replace('2', '²')
+                .replace('3', '³')
+                .replace('4', '⁴')
+                .replace('5', '⁵')
+                .replace('6', '⁶')
+                .replace('7', '⁷')
+                .replace('8', '⁸')
+                .replace('9', '⁹');
+    }
+
+    private String convertSuperscriptToNormal(String input) {
+        return input
+                .replace('⁰', '0')
+                .replace('¹', '1')
+                .replace('²', '2')
+                .replace('³', '3')
+                .replace('⁴', '4')
+                .replace('⁵', '5')
+                .replace('⁶', '6')
+                .replace('⁷', '7')
+                .replace('⁸', '8')
+                .replace('⁹', '9');
+    }
+
+
+    /*--------------------------------------------------------------
+     *  Square Root Handling
+     *--------------------------------------------------------------*/
+
+
+
+    /*--------------------------------------------------------------
+     *  Factorial Handling
+     *--------------------------------------------------------------*/
+
+
+
+    /*--------------------------------------------------------------
+     *  Natural Log Handling
+     *--------------------------------------------------------------*/
+
+
+    /*--------------------------------------------------------------
+     *  Parsing / validation utilities
+     *--------------------------------------------------------------*/
+
+    private boolean isDigit(String s) {
+        return s.length() == 1 && Character.isDigit(s.charAt(0));
+    }
+
+    private static boolean charContains(char[] arr, char c) {
+        for (char x : arr) {
+            if (x == c) return true;
         }
-        return true;
+        return false;
     }
 
-    /**
-     * checks if multiple operators are put in a row
-     * @param s the formula to check
-     * @return true if it has multiple operators (invalid formula)
-     */
-    private boolean hasConsecutiveOperators(String s) {
-        String ops = "x-+÷";
-        for (int i = 1; i < s.length(); i++) {
-            if (ops.indexOf(s.charAt(i)) != -1 && ops.indexOf(s.charAt(i-1)) != -1) {
+    public static boolean stringContains(char[] arr, String str) {
+        int count = 0;
+        for (char x : arr) {
+            if (charContains(arr, str.charAt(count)))
+            {
+                count++;
                 return true;
             }
         }
         return false;
     }
 
-    /**
-     * checks if a formula starts or ends with an operator, e.g. +53x3
-     * @param s the formula to check
-     * @return true if it starts or ends with an operator (invalid formula)
-     */
-    private boolean startsOrEndsWithOperator(String s) {
-        String ops = "x+÷";
-        return ops.indexOf(s.charAt(0)) != -1 || "x-+÷".indexOf(s.charAt(s.length()-1)) != -1;
+    private String checkForNegativeNumbers(String expr) {
+        if (expr.startsWith("-")) expr = "0" + expr;
+        return expr.replace("(-", "(0-"); // handle negatives immediately after ‘(’
     }
 
-    /**
-     * evaluates all the parentheses in an equation, and provides the simplified version
-     * @param expr the formula to check
-     * @return the simplified formula
-     */
+    private String insertImplicitMultiplication(String expr) {
+        for (int i = 0; i < expr.length() - 1; i++) {
+            char cur = expr.charAt(i);
+            char nxt = expr.charAt(i + 1);
+            // number)(number, number(, )number, )(
+            if ((cur == ')' && (Character.isDigit(nxt) || nxt == '(')) ||
+                    (nxt == '(' && Character.isDigit(cur))) {
+                expr = expr.substring(0, i + 1) + 'x' + expr.substring(i + 1);
+                i++; // skip inserted char
+            }
+        }
+        return expr;
+    }
+
+    /*--------------------------------------------------------------
+     *  Formula validation
+     *--------------------------------------------------------------*/
+
+    private boolean isValidFormula(String s) {
+        return s.isEmpty() || !hasBalancedParentheses(s) || !hasOnlyAllowedChars(s)
+                || hasConsecutiveOperators(s) || startsOrEndsWithOperator(s);
+    }
+
+    private boolean hasBalancedParentheses(String s) {
+        int depth = 0;
+        for (char c : s.toCharArray()) {
+            if (c == '(') depth++; else if (c == ')') depth--;
+            if (depth < 0) return false;
+        }
+        return depth == 0;
+    }
+
+    private boolean hasOnlyAllowedChars(String s) {
+        for (char c : s.toCharArray()) {
+            if (!Character.isDigit(c) && "x-+÷().!".indexOf(c) == -1 && !charContains(SUPERSCRIPT_DIGITS, c)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean hasConsecutiveOperators(String s) {
+        String ops = "x-+÷";
+        for (int i = 1; i < s.length(); i++) {
+            if (ops.indexOf(s.charAt(i)) != -1 && ops.indexOf(s.charAt(i - 1)) != -1) return true;
+        }
+        return false;
+    }
+
+    private boolean startsOrEndsWithOperator(String s) {
+        String ops = "x+÷";
+        return ops.indexOf(s.charAt(0)) != -1 || "x-+÷".indexOf(s.charAt(s.length() - 1)) != -1;
+    }
+
+    /*--------------------------------------------------------------
+     *  Parentheses evaluation & expression calculation
+     *--------------------------------------------------------------*/
+
     private String evaluateParentheses(String expr) {
         int open;
         while ((open = expr.lastIndexOf('(')) != -1) {
             int close = expr.indexOf(')', open);
-            if (close == -1) {
-                return setError();
-            }
+            if (close == -1) return setError();
+
             String inside = expr.substring(open + 1, close);
-            if (isValidFormula(inside)) {
-                return setError();
-            }
+            if (isValidFormula(inside)) return setError();
+
+
             String value = calculateFormatted(inside);
             if (isError(value)) return value;
+
             expr = expr.substring(0, open) + value + expr.substring(close + 1);
         }
         return expr;
     }
 
-    /**
-     * calculates a properly formatted formula, one that doesn't have and parentheses
-     * @param expr the formula to check
-     * @return the calculated number
-     */
     private String calculateFormatted(String expr) {
-        for (char op : new char[]{'÷','x','+','-'}) {
-            int i = indexOfTopLevel(expr, op);
-            if (i != -1) {
-                String left  = calculateFormatted(expr.substring(0, i));
-                String right = calculateFormatted(expr.substring(i + 1));
 
+        int opIndex = findOperator(PRIMARY_OPERATORS, expr);
+
+        if (opIndex != -1) {
+            char op = expr.charAt(opIndex);
+            String left  = findLeft(expr.substring(0, opIndex));
+            String right = findRight(expr.substring(opIndex + 1));
+            if (isError(left) || isError(right)) return setError();
+
+            try {
+                double val = switch (op) {
+                    case '÷' -> MathOperations.divide(left, right);
+                    case 'x' -> MathOperations.multiply(left, right);
+                    default   -> throw new AssertionError();
+                    };
+                return String.valueOf(val);
+            }
+            catch (MathOperations.CalcException ex) {
+                return setError();
+            }
+        }
+        else
+        {
+            // check for secondary operators
+            opIndex = findOperator(SECONDARY_OPERATORS, expr);
+
+            if (opIndex != -1) {
+                char op = expr.charAt(opIndex);
+                String left  = findLeft(expr.substring(0, opIndex));
+                String right = findRight(expr.substring(opIndex + 1));
                 if (isError(left) || isError(right)) return setError();
 
                 try {
                     double val = switch (op) {
-                        case '÷' -> MathOperations.divide(left, right);
-                        case 'x' -> MathOperations.multiply(left, right);
                         case '+' -> MathOperations.add(left, right);
                         case '-' -> MathOperations.subtract(left, right);
-                        default -> throw new AssertionError();
+                        default   -> throw new AssertionError();
                     };
                     return String.valueOf(val);
-                } catch (MathOperations.CalcException ex) {
+                }
+                catch (MathOperations.CalcException ex) {
                     return setError();
                 }
             }
+            else
+            {
+                // contains no primary or secondary operators
+                return expr;
+            }
         }
 
-        /* leaf should be a pure number */
-        try {
-            return expr;
-        } catch (NumberFormatException e) {
-            return setError();
-        }
+
     }
 
-    /**
-     * gets the index position of the top level of parentheses
-     * @param expr the formula to check
-     * @param symbol the symbol to check for. in this case always either ( or )
-     * @return the index of the parentheses
-     */
-    private int indexOfTopLevel(String expr, char symbol) {
-        int depth = 0;
+    private int findOperator(char[] operators, String expr) {
         for (int i = 0; i < expr.length(); i++) {
-            char c = expr.charAt(i);
-            if (c == '(')
-            {
-                depth++;
-            } else if (c == ')')
-            {
-                depth--;
-            } else if (depth == 0 && c == symbol)
+            if (charContains(operators, expr.charAt(i)))
             {
                 return i;
             }
@@ -352,35 +469,68 @@ public class CalculatorController {
         return -1;
     }
 
+    private String findLeft(String expr)
+    {
+        StringBuilder result = new StringBuilder();
+        for (int i = expr.length() - 1; i >= 0; i--) {
+            if (charContains(OPERATORS, expr.charAt(i))) {
+                return result.toString();
+            }
+            else
+            {
+                result.insert(0, expr.charAt(i));
+            }
+        }
+        return result.toString();
+    }
+
+    private String findRight(String expr)
+    {
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < expr.length(); i++) {
+            if (charContains(OPERATORS, expr.charAt(i))) {
+                return result.toString();
+            }
+            else {
+                result.append(expr.charAt(i));
+            }
+        }
+        return result.toString();
+    }
+
+    /*--------------------------------------------------------------
+     *  Misc helpers
+     *--------------------------------------------------------------*/
+
+    private String round(String expr) {
+        try {
+            double num = Double.parseDouble(expr);
+            num = new BigDecimal(num).setScale(4, RoundingMode.HALF_UP).doubleValue();
+            return String.valueOf(num);
+        } catch (NumberFormatException e) {
+            return setError();
+        }
+    }
 
     private String setError() {
         resultText.setText("Error");
         clearInput = true;
+        superscriptMode = false;
         return "Error";
     }
 
+    private boolean isError(String s) { return "Error".equals(s); }
 
-    /**
-     * checks if there is an error. looks for the word "error"
-     * @param s the string to check
-     * @return true if there is an error
-     */
-    private boolean isError(String s) {
-        return "Error".equals(s);
-    }
-
-    /**
-     * Resets the calculator UI so it is ready for another operation
-     */
     private void resetForNextEntry() {
         operationText.setText(resultText.getText());
         resultText.clear();
         clearInput = false;
+        superscriptMode = false;
     }
 
-    @FXML
-    private void clear() {
-        resultText.clear();
+    private void update() {
+            sqrt.getStyleClass().remove("borderGlow");
+            pos = resultText.getText().length();
     }
 
 }
