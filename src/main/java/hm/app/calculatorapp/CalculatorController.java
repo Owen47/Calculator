@@ -220,6 +220,7 @@ public class CalculatorController {
     private String preprocess(String expr) throws MathOperations.CalcException {
         expr = checkForNegativeNumbers(expr);
         expr = insertImplicitMultiplication(expr);
+        expr = handleFactorial(expr);
         expr = handlePowers(expr);
         expr = handleSqrt(expr);
         if (isValidFormula(expr)) return setError();
@@ -375,7 +376,47 @@ public class CalculatorController {
     /*--------------------------------------------------------------
      *  Factorial Handling
      *--------------------------------------------------------------*/
+    private String handleFactorial(String expr) {
+        int idx;
+        while ((idx = expr.indexOf('!')) != -1)
+        {
+            StringBuilder num = new StringBuilder(String.valueOf(expr.charAt(idx - 1)));
+            if (isDigit(num.toString()))
+            {   String subString = expr.substring(0, idx);
+                for (int i = subString.length() - 2; i >= 0; i--)
+                {
+                    if (isDigit(String.valueOf(subString.charAt(i))) || subString.charAt(i) == '.')
+                    {
+                        // add to num
+                        num.insert(0, subString.charAt(i));
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                try {
+                    double val = MathOperations.factorial(String.valueOf(num));
+                    String before = expr.substring(0, idx - num.length());
+                    String factorial = String.valueOf(val);
+                    String after = expr.substring(idx + 1);
+                    expr = before + factorial + after;
+                } catch (MathOperations.CalcException e) {
+                   setError();
+                }
+            }
+            else if (expr.charAt(idx - 1) == ')')
+            {
 
+            }
+            else
+            {
+                // no digit or bracketed expression
+                return setError();
+            }
+        }
+        return expr;
+    }
 
 
     /*--------------------------------------------------------------

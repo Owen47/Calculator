@@ -1,4 +1,5 @@
 package hm.shell;
+import org.apache.commons.math3.special.Gamma;
 
 
 public class MathOperations {
@@ -44,11 +45,13 @@ public class MathOperations {
     }
 
     public static double factorial(String a) throws CalcException {
-            int num = Integer.parseInt(a);
-            for (int i = 1; i < num; i++) {
-                num *= i;
-            }
-            return num;
+        try {
+            double x = Double.parseDouble(a);
+            if (x < 0) throw new CalcException("Factorial of negative number is undefined");
+            return Gamma.gamma(x + 1);
+        } catch (NumberFormatException e) {
+            throw new CalcException("Invalid number");
+        }
     }
 
 
