@@ -249,6 +249,7 @@ public class CalculatorController {
                 int baseStart;
                 String baseValue; // numeric string we will feed to MathOperations
 
+                if (baseEnd == 0) return setError();
                 if (expr.charAt(baseEnd - 1) == ')') {
                     // Case:  ( ... )² → find matching '('
                     int depth = 0;
@@ -376,43 +377,55 @@ public class CalculatorController {
     /*--------------------------------------------------------------
      *  Factorial Handling
      *--------------------------------------------------------------*/
+
     private String handleFactorial(String expr) {
         int idx;
-        while ((idx = expr.indexOf('!')) != -1)
-        {
-            StringBuilder num = new StringBuilder(String.valueOf(expr.charAt(idx - 1)));
-            if (isDigit(num.toString()))
-            {   String subString = expr.substring(0, idx);
-                for (int i = subString.length() - 2; i >= 0; i--)
-                {
-                    if (isDigit(String.valueOf(subString.charAt(i))) || subString.charAt(i) == '.')
-                    {
-                        // add to num
-                        num.insert(0, subString.charAt(i));
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-                try {
-                    double val = MathOperations.factorial(String.valueOf(num));
-                    String before = expr.substring(0, idx - num.length());
-                    String factorial = String.valueOf(val);
-                    String after = expr.substring(idx + 1);
-                    expr = before + factorial + after;
-                } catch (MathOperations.CalcException e) {
-                   setError();
-                }
-            }
-            else if (expr.charAt(idx - 1) == ')')
-            {
+        while ((idx = expr.indexOf('!')) != -1) {
+            if (idx == 0) return setError(); // no operand before factorial
 
-            }
-            else
-            {
-                // no digit or bracketed expression
-                return setError();
+            if (isDigit(String.valueOf(expr.charAt(idx - 1))) || expr.charAt(idx - 1) == '.') {
+                // Handle numbers before !
+                int start = idx - 1;
+                while (start > 0 && (Character.isDigit(expr.charAt(start - 1)) || expr.charAt(start - 1) == '.')) {
+                    start--;
+                }
+                String number = expr.substring(start, idx);
+                double result;
+                try {
+                    result = MathOperations.factorial(number);
+                } catch (MathOperations.CalcException e) {
+                    return setError();
+                }
+                expr = expr.substring(0, start) + result + expr.substring(idx + 1);
+            } else if (expr.charAt(idx - 1) == ')') {
+                // Handle bracketed expression before !
+                int end = idx - 1;
+                int depth = 1;
+                int start = end - 1;
+                while (start >= 0 && depth > 0) {
+                    char c = expr.charAt(start);
+                    if (c == ')') depth++;
+                    else if (c == '(') depth--;
+                    start--;
+                }
+                if (depth != 0) return setError(); // mismatched parentheses
+                start++; // start is now at the opening '('
+
+                String innerExpr = expr.substring(start + 1, end);
+                String evaluated;
+                try {
+                    evaluated = preprocess(innerExpr);
+                    evaluated = evaluateParentheses(evaluated);
+                    evaluated = handlePowers(evaluated);
+                    evaluated = calculateFormatted(evaluated);
+                    if (isError(evaluated)) return evaluated;
+                    double result = MathOperations.factorial(evaluated);
+                    expr = expr.substring(0, start) + result + expr.substring(idx + 1);
+                } catch (MathOperations.CalcException e) {
+                    return setError();
+                }
+            } else {
+                return setError(); // invalid character before !
             }
         }
         return expr;
@@ -529,10 +542,15 @@ public class CalculatorController {
 
     private String calculateFormatted(String expr) {
 
-        int opIndex = findOperator(PRIMARY_OPERATORS, expr);
+        while (true) {
+            expr = checkForNegativeNumbers(expr);
+            System.out.println(expr);
 
-        if (opIndex != -1) {
-            char op = expr.charAt(opIndex);
+            int opIndex = findOperator(PRIMARY_OPERATORS, expr);
+            if (opIndex == -1) opIndex = findOperator(SECONDARY_OPERATORS, expr);
+            if (opIndex == -1) return expr;
+
+            char   op    = expr.charAt(opIndex);
             String left  = findLeft(expr.substring(0, opIndex));
             String right = findRight(expr.substring(opIndex + 1));
             if (isError(left) || isError(right)) return setError();
@@ -541,63 +559,20 @@ public class CalculatorController {
                 double val = switch (op) {
                     case '÷' -> MathOperations.divide(left, right);
                     case 'x' -> MathOperations.multiply(left, right);
-                    default   -> throw new AssertionError();
-                    };
-                if (findOperator(PRIMARY_OPERATORS, expr) == -1) {
-                    return String.valueOf(val);
-                }
-                else
-                {
-                    // update the expression, and re-run the calculation
-                    String quoted = Pattern.quote(left + op + right);
-                    String nextExpr = expr.replaceFirst(quoted, String.valueOf(val));
-                    return calculateFormatted(nextExpr);
-                }
-            }
-            catch (MathOperations.CalcException ex) {
+                    case '+' -> MathOperations.add(left, right);
+                    case '-' -> MathOperations.subtract(left, right);
+                    default  -> throw new AssertionError();
+                };
+
+                String quoted = Pattern.quote(left + op + right);
+                expr = expr.replaceFirst(quoted, String.valueOf(val));  // ← no CFNN here
+            } catch (MathOperations.CalcException ex) {
                 return setError();
             }
         }
-        else
-        {
-            // check for secondary operators
-            opIndex = findOperator(SECONDARY_OPERATORS, expr);
-
-            if (opIndex != -1) {
-                char op = expr.charAt(opIndex);
-                String left  = findLeft(expr.substring(0, opIndex));
-                String right = findRight(expr.substring(opIndex + 1));
-                if (isError(left) || isError(right)) return setError();
-
-                try {
-                    double val = switch (op) {
-                        case '+' -> MathOperations.add(left, right);
-                        case '-' -> MathOperations.subtract(left, right);
-                        default   -> throw new AssertionError();
-                    };
-                    if (findOperator(SECONDARY_OPERATORS, expr) == -1) {
-                        return String.valueOf(val);
-                    }
-                    else
-                    {
-                        // update the expression, and re-run the calculation
-                        String quoted = Pattern.quote(left + op + right);
-                        String nextExpr = expr.replaceFirst(quoted, String.valueOf(val));
-                        return calculateFormatted(nextExpr);
-                    }
-                }
-                catch (MathOperations.CalcException ex) {
-                    return setError();
-                }
-            }
-            else
-            {
-                // contains no primary or secondary operators
-                return expr;
-            }
-        }
-
     }
+
+
 
     private int findOperator(char[] operators, String expr) {
         for (int i = 0; i < expr.length(); i++) {
