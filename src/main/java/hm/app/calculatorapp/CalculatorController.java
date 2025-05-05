@@ -542,8 +542,8 @@ public class CalculatorController {
 
     private String calculateFormatted(String expr) {
 
+        expr = checkForNegativeNumbers(expr);
         while (true) {
-            expr = checkForNegativeNumbers(expr);
             System.out.println(expr);
 
             int opIndex = findOperator(PRIMARY_OPERATORS, expr);
@@ -565,7 +565,7 @@ public class CalculatorController {
                 };
 
                 String quoted = Pattern.quote(left + op + right);
-                expr = expr.replaceFirst(quoted, String.valueOf(val));  // ← no CFNN here
+                expr = expr.replaceFirst(quoted, String.valueOf(val));
             } catch (MathOperations.CalcException ex) {
                 return setError();
             }
@@ -575,28 +575,42 @@ public class CalculatorController {
 
 
     private int findOperator(char[] operators, String expr) {
+        boolean expectUnary = true;
         for (int i = 0; i < expr.length(); i++) {
-            if (charContains(operators, expr.charAt(i)))
-            {
+            char c = expr.charAt(i);
+
+            if (c == '(') {
+                expectUnary = true;
+                continue;
+            }
+
+            if (charContains(operators, c)) {
+                if (c == '-' && expectUnary) {
+                    expectUnary = false;
+                    continue;
+                }
                 return i;
             }
+            expectUnary = false;
         }
         return -1;
     }
 
-    private String findLeft(String expr)
-    {
-        StringBuilder result = new StringBuilder();
-        for (int i = expr.length() - 1; i >= 0; i--) {
-            if (charContains(OPERATORS, expr.charAt(i))) {
-                return result.toString();
-            }
-            else
-            {
-                result.insert(0, expr.charAt(i));
-            }
+    private String findLeft(String expr) {
+        StringBuilder out = new StringBuilder();
+        int i = expr.length() - 1;
+
+        /* copy the number (digits / decimal point) */
+        while (i >= 0 && (Character.isDigit(expr.charAt(i)) || expr.charAt(i) == '.')) {
+            out.insert(0, expr.charAt(i--));
         }
-        return result.toString();
+
+        /* pick up a unary '-' if it is just before the number */
+        if (i >= 0 && expr.charAt(i) == '-' &&
+                (i == 0 || charContains(OPERATORS, expr.charAt(i-1)) || expr.charAt(i-1) == '(')) {
+            out.insert(0, '-');
+        }
+        return out.toString();
     }
 
     private String findRight(String expr)
