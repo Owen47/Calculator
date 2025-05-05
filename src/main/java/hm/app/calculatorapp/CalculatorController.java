@@ -137,12 +137,29 @@ public class CalculatorController {
         }
     }
 
-    @FXML private void setFactorial() {
+    @FXML
+    private void setFactorial() {
         superscriptMode = false;
         if (clearInput) resetForNextEntry();
-        resultText.insertText(resultText.getCaretPosition(), "!");
+
+        String text  = resultText.getText();
+        int    caret = resultText.getCaretPosition();
+
+        // decide whether to prepend a 0
+        boolean prependZero = true;
+
+        if (!text.isEmpty() && caret > 0) {          // we have a char before the caret
+            char prev = text.charAt(caret - 1);
+            if (Character.isDigit(prev) || prev == ')') {
+                prependZero = false;                 // something valid is already before '!'
+            }
+        }
+
+        resultText.insertText(caret, prependZero ? "0!" : "!");
+
         update();
     }
+
 
     @FXML private void insertLeftBracket()  {
         insertBracket("(");
@@ -223,8 +240,8 @@ public class CalculatorController {
         expr = handleFactorial(expr);
         expr = handlePowers(expr);
         expr = handleSqrt(expr);
-        if (isValidFormula(expr)) return setError();
-        expr = checkForNegativeNumbers(expr); // re‑run after new ‘x’ insertions
+        if (isValidFormula(expr)) return setError("Invalid expression produced from pre-processing: " + expr);
+        expr = checkForNegativeNumbers(expr);
         return expr;
     }
 
@@ -238,20 +255,17 @@ public class CalculatorController {
         while (i < expr.length()) {
             char c = expr.charAt(i);
             if (charContains(SUPERSCRIPT_DIGITS, c)) {
-                /* Collect exponent */
                 int expStart = i;
                 while (i < expr.length() && charContains(SUPERSCRIPT_DIGITS, expr.charAt(i))) i++;
                 String exponentSup = expr.substring(expStart, i);
                 String exponent    = convertSuperscriptToNormal(exponentSup);
 
-                /* Locate & evaluate base */
-                int baseEnd = expStart; // exclusive
+                int baseEnd = expStart;
                 int baseStart;
-                String baseValue; // numeric string we will feed to MathOperations
+                String baseValue;
 
-                if (baseEnd == 0) return setError();
+                if (baseEnd == 0) return setError("No base to apply power to");
                 if (expr.charAt(baseEnd - 1) == ')') {
-                    // Case:  ( ... )² → find matching '('
                     int depth = 0;
                     baseStart = baseEnd - 1;
                     while (baseStart >= 0) {
@@ -263,17 +277,38 @@ public class CalculatorController {
                         }
                         baseStart--;
                     }
-                    if (baseStart < 0) return setError(); // unmatched bracket
+                    if (baseStart < 0) return setError("Brackets do not match on () to a power");
 
                     String inside = expr.substring(baseStart + 1, baseEnd - 1);
+                    inside = preprocess(inside);
+                    inside = evaluateParentheses(inside);
+                    inside = handlePowers(inside);
                     inside = calculateFormatted(inside);
                     if (isError(inside)) return inside;
                     baseValue = inside;
 
-                    // remove entire ( ... ) from output buffer
-                    out.delete(out.length() - (baseEnd - baseStart), out.length());
+                    if (expr.charAt(baseEnd - 1) == ')') {
+                        int exponentDepth = 0;
+                        int k     = out.length() - 1;
+                        while (k >= 0) {
+                            char ch = out.charAt(k);
+                            out.deleteCharAt(k--);
+                            if (ch == ')') exponentDepth++;
+                            else if (ch == '(') {
+                                exponentDepth--;
+                                if (exponentDepth == 0) break;
+                            }
+                        }
+                    } else {
+                        int k = out.length() - 1;
+                        while (k >= 0 &&
+                                (Character.isDigit(out.charAt(k))
+                                        || out.charAt(k) == '.'
+                                        || out.charAt(k) == '-')) {
+                            out.deleteCharAt(k--);
+                        }
+                    }
                 } else {
-                    // Case: plain number right before exponent
                     baseStart = baseEnd - 1;
                     while (baseStart >= 0 && !charContains(OPERATORS, expr.charAt(baseStart)) && expr.charAt(baseStart) != '(') {
                         baseStart--;
@@ -282,8 +317,6 @@ public class CalculatorController {
                     baseValue = expr.substring(baseStart, baseEnd);
                     out.delete(out.length() - (baseEnd - baseStart), out.length());
                 }
-
-                /* Compute and append */
                 String computed = String.valueOf(MathOperations.power(baseValue, exponent));
                 out.append(computed);
             } else {
@@ -330,12 +363,10 @@ public class CalculatorController {
     private String handleSqrt(String expr) {
         int idx;
         while ((idx = expr.indexOf('√')) != -1) {
-            // square root with no opening bracket
             if (idx + 1 >= expr.length() || expr.charAt(idx + 1) != '(')
-                return setError();
+                return setError("No opening bracket found on square root");
 
-            // finds the depth
-            int start = idx + 2; // skip √(
+            int start = idx + 2;
             int depth = 1;
             int end = start;
 
@@ -346,26 +377,24 @@ public class CalculatorController {
                 end++;
             }
 
-            // brackets are wrong
-            if (depth != 0) return setError();
+            if (depth != 0) return setError("Bracket Mismatch on square root");
 
             String inside = expr.substring(start, end - 1);
             String evaluatedInside;
             try {
                 evaluatedInside = calculateFormatted(preprocess(inside));
-                if (isError(evaluatedInside)) return setError();
+                if (isError(evaluatedInside)) return setError("Error evaluating inside of square root: " + inside);
             } catch (MathOperations.CalcException e) {
-                return setError();
+                return setError("Bad expression passed to calculating functions: " + e.getMessage());
             }
 
             double result;
             try {
                 result = MathOperations.sqrt(evaluatedInside);
             } catch (MathOperations.CalcException e) {
-                return setError();
+                return setError("Bad expression passed to calculating functions: " + e.getMessage());
             }
 
-            // replace with result
             String before = expr.substring(0, idx);
             String after = expr.substring(end);
             expr = before + result + after;
@@ -381,7 +410,7 @@ public class CalculatorController {
     private String handleFactorial(String expr) {
         int idx;
         while ((idx = expr.indexOf('!')) != -1) {
-            if (idx == 0) return setError(); // no operand before factorial
+            if (idx == 0) return setError("Nothing before factorial");
 
             if (isDigit(String.valueOf(expr.charAt(idx - 1))) || expr.charAt(idx - 1) == '.') {
                 // Handle numbers before !
@@ -394,11 +423,10 @@ public class CalculatorController {
                 try {
                     result = MathOperations.factorial(number);
                 } catch (MathOperations.CalcException e) {
-                    return setError();
+                    return setError("Bad expression passed to calculating functions: " + e.getMessage());
                 }
                 expr = expr.substring(0, start) + result + expr.substring(idx + 1);
             } else if (expr.charAt(idx - 1) == ')') {
-                // Handle bracketed expression before !
                 int end = idx - 1;
                 int depth = 1;
                 int start = end - 1;
@@ -408,8 +436,8 @@ public class CalculatorController {
                     else if (c == '(') depth--;
                     start--;
                 }
-                if (depth != 0) return setError(); // mismatched parentheses
-                start++; // start is now at the opening '('
+                if (depth != 0) return setError("Mismatched Brackets"); // mismatched parentheses
+                start++;
 
                 String innerExpr = expr.substring(start + 1, end);
                 String evaluated;
@@ -422,10 +450,10 @@ public class CalculatorController {
                     double result = MathOperations.factorial(evaluated);
                     expr = expr.substring(0, start) + result + expr.substring(idx + 1);
                 } catch (MathOperations.CalcException e) {
-                    return setError();
+                    return setError("Bad expression passed to calculating functions: " + e.getMessage());
                 }
             } else {
-                return setError(); // invalid character before !
+                return setError("Invalid character before !");
             }
         }
         return expr;
@@ -447,32 +475,18 @@ public class CalculatorController {
         return false;
     }
 
-    private boolean stringContains(char[] arr, String str) {
-        int count = 0;
-        for (char x : arr) {
-            if (charContains(arr, str.charAt(count)))
-            {
-                count++;
-                return true;
-            }
-        }
-        return false;
-    }
-
     private String checkForNegativeNumbers(String expr) {
         if (expr.startsWith("-")) expr = "0" + expr;
-        return expr.replace("(-", "(0-"); // handle negatives immediately after ‘(’
+        return expr.replace("(-", "(0-");
     }
 
     private String insertImplicitMultiplication(String expr) {
         for (int i = 0; i < expr.length() - 1; i++) {
             char cur = expr.charAt(i);
             char nxt = expr.charAt(i + 1);
-            // number)(number, number(, )number, )(
-            if ((cur == ')' && (Character.isDigit(nxt) || nxt == '(')) ||
-                    (nxt == '(' && Character.isDigit(cur))) {
+            if ((cur == ')' && (Character.isDigit(nxt) || nxt == '(')) || (nxt == '(' && Character.isDigit(cur)) || (nxt == '√' && Character.isDigit(cur))) {
                 expr = expr.substring(0, i + 1) + 'x' + expr.substring(i + 1);
-                i++; // skip inserted char
+                i++;
             }
         }
         return expr;
@@ -526,10 +540,10 @@ public class CalculatorController {
         int open;
         while ((open = expr.lastIndexOf('(')) != -1) {
             int close = expr.indexOf(')', open);
-            if (close == -1) return setError();
+            if (close == -1) return setError("No closing parenthesis");
 
             String inside = expr.substring(open + 1, close);
-            if (isValidFormula(inside)) return setError();
+            if (isValidFormula(inside)) return setError("Formula inside of brackets invalid: " + inside);
 
 
             String value = calculateFormatted(inside);
@@ -544,7 +558,6 @@ public class CalculatorController {
 
         expr = checkForNegativeNumbers(expr);
         while (true) {
-            System.out.println(expr);
 
             int opIndex = findOperator(PRIMARY_OPERATORS, expr);
             if (opIndex == -1) opIndex = findOperator(SECONDARY_OPERATORS, expr);
@@ -553,7 +566,7 @@ public class CalculatorController {
             char   op    = expr.charAt(opIndex);
             String left  = findLeft(expr.substring(0, opIndex));
             String right = findRight(expr.substring(opIndex + 1));
-            if (isError(left) || isError(right)) return setError();
+            if (isError(left) || isError(right)) return setError("Left or Right of expression is invalid. " + left + " " + right);
 
             try {
                 double val = switch (op) {
@@ -567,7 +580,7 @@ public class CalculatorController {
                 String quoted = Pattern.quote(left + op + right);
                 expr = expr.replaceFirst(quoted, String.valueOf(val));
             } catch (MathOperations.CalcException ex) {
-                return setError();
+                return setError("Cannot calculate expression: " + ex.getMessage());
             }
         }
     }
@@ -600,12 +613,10 @@ public class CalculatorController {
         StringBuilder out = new StringBuilder();
         int i = expr.length() - 1;
 
-        /* copy the number (digits / decimal point) */
         while (i >= 0 && (Character.isDigit(expr.charAt(i)) || expr.charAt(i) == '.')) {
             out.insert(0, expr.charAt(i--));
         }
 
-        /* pick up a unary '-' if it is just before the number */
         if (i >= 0 && expr.charAt(i) == '-' &&
                 (i == 0 || charContains(OPERATORS, expr.charAt(i-1)) || expr.charAt(i-1) == '(')) {
             out.insert(0, '-');
@@ -637,11 +648,12 @@ public class CalculatorController {
             num = new BigDecimal(num).setScale(4, RoundingMode.HALF_UP).doubleValue();
             return String.valueOf(num);
         } catch (NumberFormatException e) {
-            return setError();
+            return setError("Rounding Error");
         }
     }
 
-    private String setError() {
+    private String setError(String from) {
+        System.out.println("Error came from: " + from);
         resultText.setText("Error");
         clearInput = true;
         superscriptMode = false;
