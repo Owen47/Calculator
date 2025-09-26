@@ -38,6 +38,8 @@ public class CalculatorController {
     private static final char[] OPERATORS          = { '÷','x','+','-' };
     private static final char[] PRIMARY_OPERATORS = { '÷','x' };
     private static final char[] SECONDARY_OPERATORS = { '+','-' };
+    private static final Pattern NUMBER_PATTERN =
+            Pattern.compile("^[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?");
 
     /** Flag: resets calculator input screen */
     private boolean clearInput = false;
@@ -363,40 +365,72 @@ public class CalculatorController {
     private String handleSqrt(String expr) {
         int idx;
         while ((idx = expr.indexOf('√')) != -1) {
-            if (idx + 1 >= expr.length() || expr.charAt(idx + 1) != '(')
-                return setError("No opening bracket found on square root");
+            if (idx + 1 >= expr.length()) return setError("No value found on square root");
 
-            int start = idx + 2;
-            int depth = 1;
-            int end = start;
+            if (expr.charAt(idx + 1) == '(') {
+                int start = idx + 2;
+                int depth = 1;
+                int end = start;
 
-            while (end < expr.length() && depth > 0) {
-                char c = expr.charAt(end);
-                if (c == '(') depth++;
-                else if (c == ')') depth--;
-                end++;
+                while (end < expr.length() && depth > 0) {
+                    char c = expr.charAt(end);
+                    if (c == '(') depth++;
+                    else if (c == ')') depth--;
+                    end++;
+                }
+
+                if (depth != 0) return setError("Bracket Mismatch on square root");
+
+                String inside = expr.substring(start, end - 1);
+                String evaluatedInside = preprocess(inside);
+                if (isError(evaluatedInside))
+                    return setError("Error preprocessing inside of square root: " + inside);
+
+                evaluatedInside = evaluateParentheses(evaluatedInside);
+                if (isError(evaluatedInside))
+                    return setError("Error evaluating inside of square root: " + inside);
+
+                try {
+                    evaluatedInside = handlePowers(evaluatedInside);
+                    if (isError(evaluatedInside))
+                        return setError("Error evaluating inside of square root: " + inside);
+
+                    evaluatedInside = calculateFormatted(evaluatedInside);
+                    if (isError(evaluatedInside))
+                        return setError("Error evaluating inside of square root: " + inside);
+                } catch (MathOperations.CalcException e) {
+                    return setError("Bad expression passed to calculating functions: " + e.getMessage());
+                }
+
+                double result;
+                try {
+                    result = MathOperations.sqrt(evaluatedInside);
+                } catch (MathOperations.CalcException e) {
+                    return setError("Bad expression passed to calculating functions: " + e.getMessage());
+                }
+
+                String before = expr.substring(0, idx);
+                String after = expr.substring(end);
+                expr = before + result + after;
+                continue;
             }
 
-            if (depth != 0) return setError("Bracket Mismatch on square root");
+            int valueStart = idx + 1;
+            java.util.regex.Matcher matcher = NUMBER_PATTERN.matcher(expr.substring(valueStart));
+            if (!matcher.find() || matcher.end() == 0)
+                return setError("No valid operand found on square root");
 
-            String inside = expr.substring(start, end - 1);
-            String evaluatedInside;
-            try {
-                evaluatedInside = calculateFormatted(preprocess(inside));
-                if (isError(evaluatedInside)) return setError("Error evaluating inside of square root: " + inside);
-            } catch (MathOperations.CalcException e) {
-                return setError("Bad expression passed to calculating functions: " + e.getMessage());
-            }
-
+            int valueEnd = valueStart + matcher.end();
+            String operand = expr.substring(valueStart, valueEnd);
             double result;
             try {
-                result = MathOperations.sqrt(evaluatedInside);
+                result = MathOperations.sqrt(operand);
             } catch (MathOperations.CalcException e) {
                 return setError("Bad expression passed to calculating functions: " + e.getMessage());
             }
 
             String before = expr.substring(0, idx);
-            String after = expr.substring(end);
+            String after = expr.substring(valueEnd);
             expr = before + result + after;
         }
 
@@ -439,6 +473,9 @@ public class CalculatorController {
                 if (depth != 0) return setError("Mismatched Brackets"); // mismatched parentheses
                 start++;
 
+                boolean hasSqrt = start > 0 && expr.charAt(start - 1) == '√';
+                int replaceStart = hasSqrt ? start - 1 : start;
+
                 String innerExpr = expr.substring(start + 1, end);
                 String evaluated;
                 try {
@@ -447,8 +484,11 @@ public class CalculatorController {
                     evaluated = handlePowers(evaluated);
                     evaluated = calculateFormatted(evaluated);
                     if (isError(evaluated)) return evaluated;
+                    if (hasSqrt) {
+                        evaluated = String.valueOf(MathOperations.sqrt(evaluated));
+                    }
                     double result = MathOperations.factorial(evaluated);
-                    expr = expr.substring(0, start) + result + expr.substring(idx + 1);
+                    expr = expr.substring(0, replaceStart) + result + expr.substring(idx + 1);
                 } catch (MathOperations.CalcException e) {
                     return setError("Bad expression passed to calculating functions: " + e.getMessage());
                 }
