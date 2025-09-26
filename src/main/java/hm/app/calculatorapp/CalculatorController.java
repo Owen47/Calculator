@@ -242,6 +242,7 @@ public class CalculatorController {
         expr = handleFactorial(expr);
         expr = handlePowers(expr);
         expr = handleSqrt(expr);
+        expr = insertImplicitMultiplication(expr);
         if (isValidFormula(expr)) return setError("Invalid expression produced from pre-processing: " + expr);
         expr = checkForNegativeNumbers(expr);
         return expr;
@@ -362,7 +363,7 @@ public class CalculatorController {
      *  Square Root Handling
      *--------------------------------------------------------------*/
 
-    private String handleSqrt(String expr) {
+    private String handleSqrt(String expr) throws MathOperations.CalcException {
         int idx;
         while ((idx = expr.indexOf('√')) != -1) {
             if (idx + 1 >= expr.length()) return setError("No value found on square root");
@@ -521,16 +522,32 @@ public class CalculatorController {
         return expr.replace("(-", "(0-");
     }
 
+    private boolean isSuperscript(char c) {
+        return charContains(SUPERSCRIPT_DIGITS, c);
+    }
+    private boolean isDigitOrDot(char c) {
+        return Character.isDigit(c) || c == '.';
+    }
+
     private String insertImplicitMultiplication(String expr) {
+        if (expr.length() < 2) return expr;
+        StringBuilder sb = new StringBuilder(expr.length() * 2);
         for (int i = 0; i < expr.length() - 1; i++) {
             char cur = expr.charAt(i);
             char nxt = expr.charAt(i + 1);
-            if ((cur == ')' && (Character.isDigit(nxt) || nxt == '(')) || (nxt == '(' && Character.isDigit(cur)) || (nxt == '√' && Character.isDigit(cur))) {
-                expr = expr.substring(0, i + 1) + 'x' + expr.substring(i + 1);
-                i++;
-            }
+            sb.append(cur);
+
+            // checks if multiplication is needed
+            boolean needMul =
+                    (cur == ')' && (Character.isDigit(nxt) || nxt == '(' || nxt == '√' || isSuperscript(nxt))) ||
+                            (isDigitOrDot(cur) && (nxt == '(' || nxt == '√')) ||
+                            (cur == '!' && (Character.isDigit(nxt) || nxt == '(' || nxt == '√' || isSuperscript(nxt))) ||
+                            (isSuperscript(cur) && (Character.isDigit(nxt) || nxt == '(' || nxt == '√'));
+
+            if (needMul) sb.append('x');
         }
-        return expr;
+        sb.append(expr.charAt(expr.length() - 1));
+        return sb.toString();
     }
 
     /*--------------------------------------------------------------
