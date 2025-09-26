@@ -396,6 +396,7 @@ public class CalculatorController {
                         return setError("Error evaluating inside of square root: " + inside);
 
                     evaluatedInside = calculateFormatted(evaluatedInside);
+
                     if (isError(evaluatedInside))
                         return setError("Error evaluating inside of square root: " + inside);
                 } catch (MathOperations.CalcException e) {
