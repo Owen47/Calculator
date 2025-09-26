@@ -6,6 +6,8 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.layout.AnchorPane;
 
 import java.math.BigDecimal;
@@ -24,6 +26,7 @@ public class CalculatorController {
     @FXML private Button     equals;
     @FXML private Button     clear;
     @FXML private AnchorPane buttonPane;
+    @FXML private AnchorPane root;
     @FXML private Button     leftBracket;
     @FXML private Button     rightBracket;
     @FXML private Button     power;
@@ -61,16 +64,18 @@ public class CalculatorController {
 
         List<Button> reserved = List.of(equals, clear, leftBracket, rightBracket, power, sqrt, delete, factorial);
 
-        // Auto‑hook every non‑reserved button
-        for (Node node : buttonPane.getChildren()) {
-            if (node instanceof Button btn) {
-                btn.setFocusTraversable(false);
+
+            // Auto‑hook every non‑reserved button
+            for (Node node : buttonPane.getChildren()) {
+                if (node instanceof Button btn) {
+                    btn.setFocusTraversable(false);
+                }
+                if (node instanceof Button btn && !reserved.contains(btn)) {
+                    btn.setOnAction(e -> appendCharacter(btn.getText()));
+                }
             }
-            if (node instanceof Button btn && !reserved.contains(btn)) {
-                btn.setOnAction(e -> appendCharacter(btn.getText()));
-            }
+
         }
-    }
 
     private void appendCharacter(String ch) {
 
