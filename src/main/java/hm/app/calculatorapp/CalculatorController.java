@@ -382,9 +382,21 @@ public class CalculatorController {
                 if (depth != 0) return setError("Bracket Mismatch on square root");
 
                 String inside = expr.substring(start, end - 1);
-                String evaluatedInside;
+                String evaluatedInside = preprocess(inside);
+                if (isError(evaluatedInside))
+                    return setError("Error preprocessing inside of square root: " + inside);
+
+                evaluatedInside = evaluateParentheses(evaluatedInside);
+                if (isError(evaluatedInside))
+                    return setError("Error evaluating inside of square root: " + inside);
+
                 try {
-                    evaluatedInside = calculateFormatted(preprocess(inside));
+                    evaluatedInside = handlePowers(evaluatedInside);
+                    if (isError(evaluatedInside))
+                        return setError("Error evaluating inside of square root: " + inside);
+
+                    evaluatedInside = calculateFormatted(evaluatedInside);
+
                     if (isError(evaluatedInside))
                         return setError("Error evaluating inside of square root: " + inside);
                 } catch (MathOperations.CalcException e) {
