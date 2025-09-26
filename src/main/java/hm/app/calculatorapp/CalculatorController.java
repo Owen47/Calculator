@@ -439,6 +439,10 @@ public class CalculatorController {
                 if (depth != 0) return setError("Mismatched Brackets"); // mismatched parentheses
                 start++;
 
+                boolean hasSqrt = start > 0 && expr.charAt(start - 1) == '√';
+                int replaceStart = hasSqrt ? start - 1 : start;
+
+
                 String innerExpr = expr.substring(start + 1, end);
                 String evaluated;
                 try {
@@ -446,9 +450,17 @@ public class CalculatorController {
                     evaluated = evaluateParentheses(evaluated);
                     evaluated = handlePowers(evaluated);
                     evaluated = calculateFormatted(evaluated);
-                    if (isError(evaluated)) return evaluated;
+                    if (isError(evaluated))
+                    {
+                        return evaluated;
+                    }
+
+                    if (hasSqrt) {
+                        evaluated = String.valueOf(MathOperations.sqrt(evaluated));
+                    }
+
                     double result = MathOperations.factorial(evaluated);
-                    expr = expr.substring(0, start) + result + expr.substring(idx + 1);
+                    expr = expr.substring(0, replaceStart) + result + expr.substring(idx + 1);
                 } catch (MathOperations.CalcException e) {
                     return setError("Bad expression passed to calculating functions: " + e.getMessage());
                 }
