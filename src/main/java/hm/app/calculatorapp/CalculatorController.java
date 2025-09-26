@@ -65,17 +65,20 @@ public class CalculatorController {
         List<Button> reserved = List.of(equals, clear, leftBracket, rightBracket, power, sqrt, delete, factorial);
 
 
-            // Auto‑hook every non‑reserved button
-            for (Node node : buttonPane.getChildren()) {
-                if (node instanceof Button btn) {
-                    btn.setFocusTraversable(false);
-                }
-                if (node instanceof Button btn && !reserved.contains(btn)) {
-                    btn.setOnAction(e -> appendCharacter(btn.getText()));
-                }
+        // Auto‑hook every non‑reserved button
+        for (Node node : buttonPane.getChildren()) {
+            if (node instanceof Button btn) {
+                btn.setFocusTraversable(false);
             }
-
+            if (node instanceof Button btn && !reserved.contains(btn)) {
+                btn.setOnAction(e -> appendCharacter(btn.getText()));
+            }
         }
+
+        equals.setDefaultButton(true);
+        resultText.setOnAction(e -> calculate());
+
+    }
 
     private void appendCharacter(String ch) {
 
@@ -207,34 +210,38 @@ public class CalculatorController {
      *  Main evaluation
      *------------------------------------------------------------------*/
     @FXML
-    private void calculate() throws MathOperations.CalcException {
-        superscriptMode = false;
-        sqrtMode = false;
-        String expr = resultText.getText();
-        resultText.clear();
-        operationText.setText(expr);
+    private void calculate() {
+        try {
+            superscriptMode = false;
+            sqrtMode = false;
+            String expr = resultText.getText();
+            resultText.clear();
+            operationText.setText(expr);
 
-        // 1) tidy input – negatives, implicit multiplications, superscripts, square roots
-        expr = preprocess(expr);
-        if (isError(expr)) return;
+            // 1) tidy input – negatives, implicit multiplications, superscripts, square roots
+            expr = preprocess(expr);
+            if (isError(expr)) return;
 
-        // 2) resolve parentheses recursively
-        expr = evaluateParentheses(expr);
-        if (isError(expr)) return;
+            // 2) resolve parentheses recursively
+            expr = evaluateParentheses(expr);
+            if (isError(expr)) return;
 
-        // 3) final power sweep (e.g. nested parentheses produced new superscripts)
-        expr = handlePowers(expr);
-        if (isError(expr)) return;
+            // 3) final power sweep (e.g. nested parentheses produced new superscripts)
+            expr = handlePowers(expr);
+            if (isError(expr)) return;
 
-        // 4) straightforward left‑to‑right evaluation honouring precedence
-        expr = calculateFormatted(expr);
-        if (isError(expr)) return;
+            // 4) straightforward left‑to‑right evaluation honouring precedence
+            expr = calculateFormatted(expr);
+            if (isError(expr)) return;
 
-        // 5) round & display
-        expr = round(expr);
-        resultText.setText(expr);
-        resultText.positionCaret(resultText.getText().length());
-        update();
+            // 5) round & display
+            expr = round(expr);
+            resultText.setText(expr);
+            resultText.positionCaret(resultText.getText().length());
+            update();
+        } catch (MathOperations.CalcException ex) {
+            setError("Cannot calculate expression: " + ex.getMessage());
+        }
     }
 
     /*------------------------------------------------------------------
